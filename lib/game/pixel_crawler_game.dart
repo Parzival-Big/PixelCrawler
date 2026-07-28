@@ -60,6 +60,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   late JoystickComponent _joystick;
   late HudButtonComponent _attackButton;
   bool _hudReady = false;
+  bool _mapReady = false;
   bool _attackButtonHeld = false;
   final _keysDown = <LogicalKeyboardKey>{};
 
@@ -80,8 +81,40 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
 
   /// Public so tests can exercise resize without a full Flutter bind.
   void fitCameraToSize(Vector2 size) {
-    if (size.y <= 0) return;
+    if (size.y <= 0 || size.x <= 0) return;
     camera.viewfinder.zoom = size.y / designHeight;
+    // Zoom changes the visible world rect — refresh follow bounds and keep
+    // the player centred (otherwise they can walk off-screen).
+    refreshCameraBounds();
+    snapCameraToPlayer();
+  }
+
+  /// Keeps the viewfinder locked on the player immediately.
+  void snapCameraToPlayer() {
+    final p = player;
+    if (p == null || !p.isMounted) return;
+    camera.viewfinder.position = p.position.clone();
+  }
+
+  /// Camera centre must stay inset by half the visible world rect so the
+  /// player cannot leave the screen. Computed in world units (not pixels):
+  /// `considerViewport: true` is unsafe with a zoomed MaxViewport because it
+  /// subtracts `viewport.virtualSize` (canvas pixels) from the map size.
+  void refreshCameraBounds() {
+    if (!_mapReady) return;
+    final mapW = map.width * tileSize;
+    final mapH = map.height * tileSize;
+    final visible = camera.visibleWorldRect;
+    final halfW = visible.width / 2;
+    final halfH = visible.height / 2;
+    final minX = halfW;
+    final maxX = mapW > visible.width ? mapW - halfW : halfW;
+    final minY = halfH;
+    final maxY = mapH > visible.height ? mapH - halfH : halfH;
+    camera.setBounds(
+      Rectangle.fromLTRB(minX, minY, maxX, maxY),
+      considerViewport: false,
+    );
   }
 
   /// Repositions virtual controls for the current canvas / hinge insets.
@@ -219,16 +252,11 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     player!.position = _tileBottom(map.playerSpawn.x, map.playerSpawn.y);
     world.add(player!);
 
-    camera.follow(player!, maxSpeed: 400, snap: true);
-    camera.setBounds(
-      Rectangle.fromLTRB(
-        0,
-        0,
-        map.width * tileSize,
-        map.height * tileSize,
-      ),
-      considerViewport: true,
-    );
+    _mapReady = true;
+    // Infinite maxSpeed so the camera never lags behind the player.
+    camera.follow(player!, snap: true);
+    refreshCameraBounds();
+    snapCameraToPlayer();
   }
 
   Vector2 _tileCenter(int x, int y) =>
