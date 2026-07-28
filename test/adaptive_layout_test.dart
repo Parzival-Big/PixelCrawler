@@ -74,12 +74,12 @@ void main() {
       expect(
         PixelCrawlerGame.roomWorldWidth,
         (DungeonGenerator.interiorW + 2) * tileSize +
-            tileSize * (wallVisualScale - 1),
+            tileSize * (tileVisualScale - 1),
       );
       expect(
         PixelCrawlerGame.roomWorldHeight,
         (DungeonGenerator.interiorH + 2) * tileSize +
-            tileSize * (wallVisualScale - 1),
+            tileSize * (tileVisualScale - 1),
       );
 
       // Exact room aspect → zoom 1.

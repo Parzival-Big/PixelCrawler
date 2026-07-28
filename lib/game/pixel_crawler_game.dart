@@ -43,11 +43,11 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   /// World size of one room including the wall ring (BoI single-room view),
-  /// plus overhang so 1.5× wall sprites fit in frame.
+  /// plus overhang so 1.5× tile sprites fit in frame.
   static const roomWorldWidth =
-      (DungeonGenerator.interiorW + 2) * tileSize + tileSize * (wallVisualScale - 1);
+      (DungeonGenerator.interiorW + 2) * tileSize + tileSize * (tileVisualScale - 1);
   static const roomWorldHeight =
-      (DungeonGenerator.interiorH + 2) * tileSize + tileSize * (wallVisualScale - 1);
+      (DungeonGenerator.interiorH + 2) * tileSize + tileSize * (tileVisualScale - 1);
 
   /// Used for HUD control scaling; matches the room height.
   static const designHeight = roomWorldHeight;
@@ -418,6 +418,32 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   // ------------------------------------------------------------ events
+
+  /// True when a closed door occupies this tile (blocks player and monsters).
+  bool doorBlocksTile(int tx, int ty) {
+    for (final d in world.children.query<Door>()) {
+      if (d.spawn.pos.x == tx && d.spawn.pos.y == ty && d.blocksPassage) {
+        return true;
+      }
+    }
+    // Fallback for monsters: any door tile is blocked if no component match.
+    return false;
+  }
+
+  /// No living monsters in the active room (doors may open).
+  bool get currentRoomCleared {
+    final room = currentRoom;
+    if (room == null) return true;
+    for (final m in world.children.query<Monster>()) {
+      if (m.isDead) continue;
+      final info = map.roomInfoContaining(
+        m.position.x ~/ tileSize,
+        m.position.y ~/ tileSize,
+      );
+      if (info?.gridKey == room.gridKey) return false;
+    }
+    return true;
+  }
 
   /// True when a feet box centred at ([cx], [cy]) overlaps any solid prop.
   bool solidBlocksFeet(double cx, double cy, double w, double h) {

@@ -14,8 +14,9 @@ class SpikeTrap extends SpriteComponent
     with HasGameReference<PixelCrawlerGame> {
   SpikeTrap({required this.tile, required this.big})
       : super(
-          position: Vector2(tile.x * tileSize, tile.y * tileSize),
-          size: Vector2.all(tileSize),
+          position: Vector2(tile.x * tileSize, tile.y * tileSize) +
+              tileVisualOffset(),
+          size: Vector2.all(tileVisualSize),
           anchor: Anchor.topLeft,
           priority: -9990,
         );

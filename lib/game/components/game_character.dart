@@ -51,6 +51,10 @@ abstract class GameCharacter extends SpriteAnimationComponent
       if (!ok) {
         return false;
       }
+      if (game.doorBlocksTile(tx, ty)) {
+        return false;
+      }
+      // Monsters never leave through door tiles even when open.
       if (blockedByDoors && game.map.isDoorTile(tx, ty)) {
         return false;
       }
@@ -59,6 +63,7 @@ abstract class GameCharacter extends SpriteAnimationComponent
   }
 
   /// When true, door tiles are impassable (monsters never cross doors).
+  /// Prefer [PixelCrawlerGame.doorBlocksTile] which respects open/closed.
   bool get blockedByDoors => false;
 
   /// Flying units can cross pit tiles.
