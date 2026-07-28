@@ -9,11 +9,10 @@ const double tileSize = 16;
 
 /// Bakes the whole static floor into a single image for cheap rendering.
 ///
-/// The 2.5D look comes from three tricks:
-///  * wall cells whose south neighbour is walkable render a brick *face*
-///    (a vertical surface) instead of a flat top;
-///  * floor cells right under a face get an ambient-occlusion shadow band;
-///  * everything else (entities) is y-sorted above this layer.
+/// Walls are auto-tiled: the pack provides directional wall tiles whose
+/// shaded edge must face the floor, plus inner/outer corner tiles. On top
+/// of that the 2.5D feel comes from ambient-occlusion bands under
+/// south-facing walls and y-sorted entities.
 class DungeonRenderer extends SpriteComponent {
   DungeonRenderer(this.map) : super(priority: -10000, position: Vector2.zero());
 
@@ -25,11 +24,9 @@ class DungeonRenderer extends SpriteComponent {
     final canvas = ui.Canvas(recorder);
 
     final floorSheet = GameAssets.floorTiles;
-    final wallFront = GameAssets.wallFront.sprite();
-    final wallTop = GameAssets.wallTop.sprite();
     final stairsSprite = GameAssets.stairs.sprite();
 
-    final aoPaint = ui.Paint()..color = const ui.Color(0x55000000);
+    final aoPaint = ui.Paint()..color = const ui.Color(0x3D000000);
     final sizeVec = Vector2.all(tileSize);
 
     for (var y = 0; y < map.height; y++) {
@@ -40,19 +37,23 @@ class DungeonRenderer extends SpriteComponent {
           case TileType.empty:
             break;
           case TileType.floor:
-            floorSheet
-                .frame((x * 7 + y * 13) % floorSheet.frames)
-                .render(canvas, position: pos, size: sizeVec);
+            // Mostly plain tiles with sporadic cracked/flower variants.
+            final r = (x * 73856093 ^ y * 19349663) % 23;
+            final variant = r < 20 ? r % 2 : (r == 20 ? 2 : 3);
+            floorSheet.frame(variant).render(canvas, position: pos, size: sizeVec);
             if (map.tileAt(x, y - 1) == TileType.wall) {
               canvas.drawRect(
-                ui.Rect.fromLTWH(pos.x, pos.y, tileSize, 4),
+                ui.Rect.fromLTWH(pos.x, pos.y, tileSize, 3),
                 aoPaint,
               );
             }
           case TileType.wall:
-            final faces = map.isWalkable(x, y + 1);
-            (faces ? wallFront : wallTop)
-                .render(canvas, position: pos, size: sizeVec);
+            final name = _wallTileName(x, y);
+            if (name != null) {
+              final sheet = GameAssets.wallTiles[name]!;
+              final variant = (x * 7 + y * 13) % sheet.frames;
+              sheet.frame(variant).render(canvas, position: pos, size: sizeVec);
+            }
           case TileType.stairs:
             stairsSprite.render(canvas, position: pos, size: sizeVec);
         }
@@ -65,9 +66,35 @@ class DungeonRenderer extends SpriteComponent {
     sprite = Sprite(image);
     size = Vector2(map.width * tileSize, map.height * tileSize);
   }
+
+  /// Picks the wall tile orientation from the walkable neighbours.
+  String? _wallTileName(int x, int y) {
+    bool f(int dx, int dy) => map.isWalkable(x + dx, y + dy);
+    final n = f(0, -1), s = f(0, 1), w = f(-1, 0), e = f(1, 0);
+
+    // Floor on two orthogonal sides: inner corner (the wall band bends
+    // around the floor).
+    if (s && e) return 'inner_br';
+    if (s && w) return 'inner_bl';
+    if (n && e) return 'inner_tr';
+    if (n && w) return 'inner_tl';
+
+    // Floor on one side: straight wall.
+    if (s) return 'bottom';
+    if (n) return 'top';
+    if (w) return 'left';
+    if (e) return 'right';
+
+    // Floor only diagonally: outer corner.
+    if (f(1, 1)) return 'outer_br';
+    if (f(-1, 1)) return 'outer_bl';
+    if (f(1, -1)) return 'outer_tr';
+    if (f(-1, -1)) return 'outer_tl';
+    return null;
+  }
 }
 
-/// Warm additive glow used under torches.
+/// Soft additive glow used under torches and fire pots.
 class GlowComponent extends PositionComponent {
   GlowComponent({required Vector2 center, this.radius = 26})
       : super(position: center, priority: -9999, anchor: Anchor.center);
@@ -88,7 +115,7 @@ class GlowComponent extends PositionComponent {
       ..shader = ui.Gradient.radial(
         ui.Offset.zero,
         r,
-        [const ui.Color(0x30FFAA44), const ui.Color(0x00FFAA44)],
+        [const ui.Color(0x2EB9DDA7), const ui.Color(0x00B9DDA7)],
       )
       ..blendMode = ui.BlendMode.plus;
     canvas.drawCircle(ui.Offset.zero, r, paint);

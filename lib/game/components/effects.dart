@@ -6,7 +6,7 @@ class FloatingText extends TextComponent {
   FloatingText({
     required String text,
     required Vector2 position,
-    Color color = const Color(0xFFFFFFFF),
+    Color color = const Color(0xFFB9DDA7),
   }) : super(
           text: text,
           position: position,
@@ -17,7 +17,7 @@ class FloatingText extends TextComponent {
               fontFamily: 'PressStart2P',
               fontSize: 5,
               color: color,
-              shadows: const [Shadow(color: Color(0xFF1A1A24), offset: Offset(1, 1))],
+              shadows: const [Shadow(color: Color(0xFF0E222B), offset: Offset(1, 1))],
             ),
           ),
         );

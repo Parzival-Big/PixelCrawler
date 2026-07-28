@@ -165,7 +165,7 @@ class ExplosionPuff extends PositionComponent {
   void render(ui.Canvas canvas) {
     final k = (_t / _life).clamp(0.0, 1.0);
     final paint = ui.Paint()
-      ..color = ui.Color.fromARGB(((1 - k) * 200).round(), 255, 158, 61)
+      ..color = ui.Color.fromARGB(((1 - k) * 200).round(), 0xB9, 0xDD, 0xA7)
       ..style = ui.PaintingStyle.stroke
       ..strokeWidth = 3 * (1 - k) + 1;
     canvas.drawCircle(ui.Offset.zero, radius * k, paint);

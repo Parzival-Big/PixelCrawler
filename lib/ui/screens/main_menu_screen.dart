@@ -32,7 +32,7 @@ class MainMenuScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      PixelSpriteAnimation(spec: GameAssets.torch, scale: 3),
+                      PixelSpriteAnimation(spec: GameAssets.firePot, scale: 3),
                       SizedBox(width: 12),
                       Column(
                         children: [
@@ -41,10 +41,10 @@ class MainMenuScreen extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: pixelFont,
                               fontSize: 34,
-                              color: PixelColors.gold,
+                              color: PixelColors.text,
                               shadows: [
                                 Shadow(
-                                  color: Color(0xFF7A4CD8),
+                                  color: Color(0xFF68A08A),
                                   offset: Offset(3, 3),
                                 ),
                               ],
@@ -55,10 +55,10 @@ class MainMenuScreen extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: pixelFont,
                               fontSize: 34,
-                              color: PixelColors.text,
+                              color: PixelColors.textDim,
                               shadows: [
                                 Shadow(
-                                  color: Color(0xFFE83C4C),
+                                  color: Color(0xFF15323D),
                                   offset: Offset(3, 3),
                                 ),
                               ],
@@ -67,7 +67,7 @@ class MainMenuScreen extends StatelessWidget {
                         ],
                       ),
                       SizedBox(width: 12),
-                      PixelSpriteAnimation(spec: GameAssets.torch, scale: 3),
+                      PixelSpriteAnimation(spec: GameAssets.firePot, scale: 3),
                     ],
                   ),
                   const SizedBox(height: 8),

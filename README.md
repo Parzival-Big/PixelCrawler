@@ -31,27 +31,22 @@ La visuale è top-down con profondità simulata:
 - ombre ellittiche sotto i personaggi e bande di occlusione ambientale sotto i muri;
 - torce animate con **bagliore additivo**.
 
-## Usare i tuoi asset (tiles / objects / monsters)
+## Asset
 
-Il gioco attualmente usa sprite **segnaposto** generati da `tools/generate_placeholders.py`, con la stessa struttura di cartelle del tuo asset pack:
+La grafica è l'asset pack 1-bit (16×16, palette a 3 toni `#B9DDA7` / `#68A08A` / `#1E4250`) contenuto in **`assets/raw_pack/`** (tiles, objects, monsters). La GUI usa la stessa palette.
 
-```
-assets/images/
-├── tiles/      floor.png, wall_front.png, wall_top.png, stairs.png
-├── objects/    chest.png, coin.png, torch.png, potion_red.png, potion_blue.png
-├── monsters/   slime.png, bat.png, skeleton.png, goblin.png
-├── heroes/     knight.png, mage.png, hunter.png, rogue.png, slime_hero.png
-├── effects/    slash.png, fireball.png, arrow.png, blob.png
-└── ui/         heart_full.png, heart_half.png, heart_empty.png
+Gli sprite pronti per il gioco in `assets/images/` (strisce di animazione, eroe Slime con corona, effetti nella palette del pack) sono **composti automaticamente** dal raw pack:
+
+```bash
+pip install pillow
+python3 tools/prepare_pack.py
 ```
 
-Per sostituire la grafica con il tuo pack:
+Da rieseguire ogni volta che il raw pack cambia. La mappatura fra file e sprite di gioco (percorsi, dimensioni e numero di frame) vive in un unico punto: **`lib/config/game_assets.dart`**.
 
-1. Copia i tuoi PNG dentro `assets/images/tiles/`, `assets/images/objects/`, `assets/images/monsters/` (e `heroes/` per i personaggi).
-2. Apri **`lib/config/game_assets.dart`**: è l'**unico** file che conosce i nomi dei file e il layout dei frame. Aggiorna percorso, dimensione dei frame e numero di frame di ogni sprite (le animazioni sono strisce orizzontali).
-3. Fatto: il resto del codice non fa riferimento ad alcun file.
+I muri usano l'**auto-tiling**: il renderer sceglie il tile giusto (dritto, angolo interno/esterno, 5 varianti di texture) in base a dove si trova il pavimento rispetto al muro.
 
-Il font incluso è [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) (licenza SIL OFL), in tema con la pixel art.
+Il font incluso è [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) (licenza SIL OFL), in tema con la pixel art. `tools/generate_placeholders.py` resta disponibile come fallback per rigenerare sprite segnaposto.
 
 ## Eseguire il progetto
 
@@ -88,13 +83,6 @@ flutter test
 ```
 
 I test coprono: generazione del dungeon (le scale sono sempre raggiungibili, tutto lo spawn è su tile calpestabili), progressione della difficoltà, salvataggio/sblocco dello Slime e uno smoke test che avvia il gioco vero con ogni eroe e simula alcuni secondi di gameplay.
-
-## Rigenerare gli sprite segnaposto
-
-```bash
-pip install pillow
-python3 tools/generate_placeholders.py
-```
 
 ## Struttura del codice
 

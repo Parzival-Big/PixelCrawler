@@ -95,7 +95,7 @@ class _HeroCard extends StatelessWidget {
                       size: 48,
                       color: PixelColors.textDim,
                     )
-                  : PixelSpriteAnimation(spec: def.anim, scale: 4),
+                  : PixelSpriteAnimation(spec: def.anim, scale: 5),
             ),
             const SizedBox(height: 10),
             if (locked)

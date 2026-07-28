@@ -62,7 +62,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       _keysDown.contains(LogicalKeyboardKey.keyJ);
 
   @override
-  Color backgroundColor() => const Color(0xFF14141c);
+  Color backgroundColor() => const Color(0xFF0E222B);
 
   @override
   Future<void> onLoad() async {
@@ -71,11 +71,11 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     _joystick = JoystickComponent(
       knob: CircleComponent(
         radius: 13,
-        paint: Paint()..color = const Color(0x88E8E8DC),
+        paint: Paint()..color = const Color(0x88B9DDA7),
       ),
       background: CircleComponent(
         radius: 30,
-        paint: Paint()..color = const Color(0x33E8E8DC),
+        paint: Paint()..color = const Color(0x2EB9DDA7),
       ),
       margin: const EdgeInsets.only(left: 24, bottom: 20),
     );
@@ -83,18 +83,18 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     final attackButton = HudButtonComponent(
       button: CircleComponent(
         radius: 21,
-        paint: Paint()..color = const Color(0x55E83C4C),
+        paint: Paint()..color = const Color(0x4468A08A),
         children: [
           CircleComponent(
             radius: 16,
             position: Vector2.all(5),
-            paint: Paint()..color = const Color(0x99E83C4C),
+            paint: Paint()..color = const Color(0x99B9DDA7),
           ),
         ],
       ),
       buttonDown: CircleComponent(
         radius: 21,
-        paint: Paint()..color = const Color(0xCCE83C4C),
+        paint: Paint()..color = const Color(0xCCB9DDA7),
       ),
       margin: const EdgeInsets.only(right: 24, bottom: 18),
       onPressed: () => _attackButtonHeld = true,
@@ -124,6 +124,18 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       final py = t.y * tileSize;
       world.add(Torch(position: Vector2(px, py)));
       world.add(GlowComponent(center: Vector2(px + 8, py + 12)));
+    }
+
+    for (final (p, kind) in map.decorSpawns) {
+      world.add(Decor(
+        position: _tileBottom(p.x, p.y),
+        spec: GameAssets.decor[kind % GameAssets.decor.length],
+      ));
+    }
+    for (final p in map.firePotSpawns) {
+      final pos = _tileBottom(p.x, p.y);
+      world.add(FirePot(position: pos));
+      world.add(GlowComponent(center: pos - Vector2(0, 6), radius: 30));
     }
 
     world.add(StairsTrigger(

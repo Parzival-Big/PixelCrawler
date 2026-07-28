@@ -97,11 +97,11 @@ class Monster extends GameCharacter {
       final x = (size.x - barW) / 2;
       canvas.drawRect(
         ui.Rect.fromLTWH(x, -3, barW, 2),
-        ui.Paint()..color = const ui.Color(0xAA1A1A24),
+        ui.Paint()..color = const ui.Color(0xAA15323D),
       );
       canvas.drawRect(
         ui.Rect.fromLTWH(x, -3, barW * hp / maxHp, 2),
-        ui.Paint()..color = const ui.Color(0xFFE83C4C),
+        ui.Paint()..color = const ui.Color(0xFFB9DDA7),
       );
     }
   }

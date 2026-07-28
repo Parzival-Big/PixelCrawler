@@ -154,6 +154,21 @@ class DungeonGenerator {
       if (p != null) map.potionSpawns.add(p);
     }
 
+    // Decorative props along room edges, plus an occasional fire pot.
+    for (final room in rooms) {
+      final decorCount = _rng.nextInt(3);
+      for (var i = 0; i < decorCount; i++) {
+        final p = randomSpotIn(room);
+        if (p != null && p.distanceTo(map.playerSpawn) > 3) {
+          map.decorSpawns.add((p, _rng.nextInt(5)));
+        }
+      }
+      if (_rng.nextDouble() < 0.35) {
+        final p = randomSpotIn(room);
+        if (p != null) map.firePotSpawns.add(p);
+      }
+    }
+
     // Torches on south-facing wall faces.
     for (var y = 0; y < map.height; y++) {
       for (var x = 0; x < map.width; x++) {

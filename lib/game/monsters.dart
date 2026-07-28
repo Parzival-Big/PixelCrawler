@@ -1,6 +1,6 @@
 import '../config/game_assets.dart';
 
-enum MonsterType { slime, bat, skeleton, goblin }
+enum MonsterType { slime, bat, rat, skeleton, spider, ghost }
 
 class MonsterDef {
   const MonsterDef({
@@ -24,7 +24,7 @@ class MonsterDef {
   final double aggroRange;
   final int coinDrop;
 
-  /// Erratic movers (bats) wobble sideways while chasing.
+  /// Erratic movers (bats, ghosts) wobble sideways while chasing.
   final bool erratic;
 }
 
@@ -50,6 +50,16 @@ const monsters = <MonsterType, MonsterDef>{
     coinDrop: 1,
     erratic: true,
   ),
+  MonsterType.rat: MonsterDef(
+    type: MonsterType.rat,
+    anim: GameAssets.rat,
+    baseHp: 4,
+    hpPerFloor: 1,
+    damage: 1,
+    speed: 62,
+    aggroRange: 130,
+    coinDrop: 1,
+  ),
   MonsterType.skeleton: MonsterDef(
     type: MonsterType.skeleton,
     anim: GameAssets.skeleton,
@@ -60,15 +70,26 @@ const monsters = <MonsterType, MonsterDef>{
     aggroRange: 110,
     coinDrop: 2,
   ),
-  MonsterType.goblin: MonsterDef(
-    type: MonsterType.goblin,
-    anim: GameAssets.goblin,
+  MonsterType.spider: MonsterDef(
+    type: MonsterType.spider,
+    anim: GameAssets.spider,
     baseHp: 5,
     hpPerFloor: 1,
     damage: 2,
-    speed: 58,
+    speed: 56,
     aggroRange: 130,
     coinDrop: 2,
+  ),
+  MonsterType.ghost: MonsterDef(
+    type: MonsterType.ghost,
+    anim: GameAssets.ghost,
+    baseHp: 7,
+    hpPerFloor: 2,
+    damage: 2,
+    speed: 44,
+    aggroRange: 150,
+    coinDrop: 3,
+    erratic: true,
   ),
 };
 
@@ -80,13 +101,13 @@ List<MonsterType> spawnPoolForFloor(int floor) {
     MonsterType.bat,
   ];
   if (floor >= 2) {
-    pool.addAll([MonsterType.goblin, MonsterType.bat]);
+    pool.addAll([MonsterType.rat, MonsterType.bat]);
   }
   if (floor >= 3) {
-    pool.addAll([MonsterType.skeleton, MonsterType.goblin]);
+    pool.addAll([MonsterType.skeleton, MonsterType.spider]);
   }
   if (floor >= 5) {
-    pool.addAll([MonsterType.skeleton, MonsterType.skeleton]);
+    pool.addAll([MonsterType.ghost, MonsterType.skeleton]);
   }
   return pool;
 }
