@@ -4,7 +4,6 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pixel_crawler/game/dungeon/dungeon_generator.dart';
 import 'package:pixel_crawler/game/heroes.dart';
 import 'package:pixel_crawler/game/pixel_crawler_game.dart';
 import 'package:pixel_crawler/services/save_service.dart';
