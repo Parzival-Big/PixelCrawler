@@ -116,8 +116,8 @@ class _HeroCard extends StatelessWidget {
     return PixelPanel(
       padding: const EdgeInsets.all(10),
       child: SizedBox(
-        width: 190,
-        height: 320,
+        width: 200,
+        height: 340,
         child: Column(
           children: [
             Text(
@@ -129,16 +129,7 @@ class _HeroCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            SizedBox(
-              height: 64,
-              child: locked
-                  ? const Icon(
-                      Icons.lock,
-                      size: 40,
-                      color: PixelColors.textDim,
-                    )
-                  : PixelSpriteAnimation(spec: def.anim, scale: 4),
-            ),
+            _HeroStage(def: def, locked: locked),
             const SizedBox(height: 8),
             Expanded(
               child: SingleChildScrollView(
@@ -196,6 +187,91 @@ class _HeroCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Dark inset stage so the light hero sprite reads clearly on the card.
+class _HeroStage extends StatelessWidget {
+  const _HeroStage({required this.def, required this.locked});
+
+  final HeroDef def;
+  final bool locked;
+
+  static const _scale = 6.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 120,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: PixelColors.bg,
+        border: Border.all(color: PixelColors.borderDark, width: 2),
+      ),
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          // Soft vignette so the figure sits in a pocket of depth.
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFF15323D),
+                    PixelColors.bg,
+                    Color(0xFF0A1A20),
+                  ],
+                  stops: [0.0, 0.45, 1.0],
+                ),
+              ),
+            ),
+          ),
+          // Floor plank the hero stands on.
+          Positioned(
+            left: 14,
+            right: 14,
+            bottom: 12,
+            child: Container(
+              height: 10,
+              color: PixelColors.surfaceLight,
+            ),
+          ),
+          Positioned(
+            left: 14,
+            right: 14,
+            bottom: 10,
+            child: Container(
+              height: 2,
+              color: PixelColors.borderDark,
+            ),
+          ),
+          // Drop shadow under the feet.
+          Positioned(
+            bottom: 18,
+            child: Container(
+              width: 52,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0x88000000),
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 20,
+            child: locked
+                ? const Icon(
+                    Icons.lock,
+                    size: 48,
+                    color: PixelColors.textDim,
+                  )
+                : PixelSpriteAnimation(spec: def.anim, scale: _scale),
+          ),
+        ],
       ),
     );
   }
