@@ -294,6 +294,9 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     world.add(FloatingText(text: '$amount', position: worldPos));
   }
 
+  /// Chance to meet the between-floor merchant when descending.
+  static const shopChance = 0.05;
+
   Future<void> goToNextFloor() async {
     floor++;
     floorNotifier.value = floor;
@@ -302,13 +305,13 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     if (justUnlocked && overlays.registeredOverlays.contains(Overlays.unlock)) {
       overlays.add(Overlays.unlock);
     }
-    // Between floors: pause and open the temporary merchant.
-    pauseEngine();
-    if (overlays.registeredOverlays.contains(Overlays.shop)) {
+
+    final meetMerchant = _rng.nextDouble() < shopChance;
+    if (meetMerchant && overlays.registeredOverlays.contains(Overlays.shop)) {
+      pauseEngine();
       overlays.add(Overlays.shop);
     } else {
-      // Unit tests without GameWidget: skip UI and enter the floor directly.
-      await finishShopAndEnterFloor();
+      await _loadFloor();
     }
   }
 
