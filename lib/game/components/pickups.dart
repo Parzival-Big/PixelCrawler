@@ -26,10 +26,16 @@ abstract class Pickup extends SpriteAnimationComponent
 
   final double pickupRadius;
   double _bobT = 0;
+  bool _inRoom = true;
 
   @override
   void update(double dt) {
     super.update(dt);
+    final tx = position.x ~/ tileSize;
+    final ty = position.y ~/ tileSize;
+    _inRoom = tileInCurrentRoom(game, tx, ty);
+    if (!_inRoom) return;
+
     _bobT += dt;
     priority = (position.y * 10).round();
     final player = game.player;
@@ -44,6 +50,7 @@ abstract class Pickup extends SpriteAnimationComponent
 
   @override
   void render(ui.Canvas canvas) {
+    if (!_inRoom) return;
     canvas.save();
     canvas.translate(0, sin(_bobT * 4) * 1.2 - 1);
     super.render(canvas);
@@ -205,6 +212,13 @@ class Chest extends SpriteComponent
   @override
   void update(double dt) {
     super.update(dt);
+    final inRoom = tileInCurrentRoom(
+      game,
+      position.x ~/ tileSize,
+      position.y ~/ tileSize,
+    );
+    opacity = inRoom ? 1 : 0;
+    if (!inRoom) return;
     if (_open) return;
     final player = game.player;
     if (player != null && player.position.distanceTo(position) < 16) {
@@ -271,9 +285,14 @@ class StairsTrigger extends PositionComponent
 
 /// Animated torch overlay on a wall tile. Sprite strip matches [side]
 /// (`top`/`bottom`/`left`/`right`) from the asset pack.
-class Torch extends SpriteAnimationComponent {
-  Torch({required Vector2 position, required this.side})
-      : super(
+class Torch extends SpriteAnimationComponent
+    with HasGameReference<PixelCrawlerGame> {
+  Torch({
+    required Vector2 position,
+    required this.side,
+    required this.tileX,
+    required this.tileY,
+  }) : super(
           position: position,
           size: Vector2.all(16),
           anchor: Anchor.topLeft,
@@ -282,17 +301,26 @@ class Torch extends SpriteAnimationComponent {
         );
 
   final WallSide side;
+  final int tileX;
+  final int tileY;
 
   @override
   Future<void> onLoad() async {
     animation = GameAssets.torchWallFor(side.assetKey).animation();
     animationTicker?.clock = Random().nextDouble();
   }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    opacity = tileInCurrentRoom(game, tileX, tileY) ? 1 : 0;
+  }
 }
 
 /// Standing burning fire pot: a light source placed on the floor,
 /// y-sorted with the other entities. Blocks movement and projectiles.
-class FirePot extends SpriteAnimationComponent with SolidObstacle {
+class FirePot extends SpriteAnimationComponent
+    with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   FirePot({required Vector2 position})
       : super(
           position: position,
@@ -310,6 +338,18 @@ class FirePot extends SpriteAnimationComponent with SolidObstacle {
     animation = GameAssets.firePot.animation();
     animationTicker?.clock = Random().nextDouble();
     priority = (position.y * 10).round();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    opacity = tileInCurrentRoom(
+      game,
+      position.x ~/ tileSize,
+      position.y ~/ tileSize,
+    )
+        ? 1
+        : 0;
   }
 }
 
@@ -356,6 +396,13 @@ class Decor extends SpriteComponent
   @override
   void update(double dt) {
     super.update(dt);
+    final inRoom = tileInCurrentRoom(
+      game,
+      position.x ~/ tileSize,
+      position.y ~/ tileSize,
+    );
+    opacity = inRoom ? 1 : 0;
+    if (!inRoom) return;
     priority = (position.y * 10).round();
     if (!isBoneLitter || _transformed) return;
 

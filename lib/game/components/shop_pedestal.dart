@@ -55,6 +55,12 @@ class ShopPedestal extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    final inRoom = tileInCurrentRoom(
+      game,
+      spawn.pos.x,
+      spawn.pos.y,
+    );
+    if (!inRoom) return;
     if (_bought) return;
     final player = game.player;
     if (player == null || player.isDead) return;
@@ -67,6 +73,7 @@ class ShopPedestal extends PositionComponent
 
   @override
   void render(ui.Canvas canvas) {
+    if (!tileInCurrentRoom(game, spawn.pos.x, spawn.pos.y)) return;
     final base = ui.Paint()..color = const ui.Color(0xFF1E4250);
     canvas.drawRect(const ui.Rect.fromLTWH(2, 16, 12, 6), base);
     final top = ui.Paint()..color = const ui.Color(0xFF68A08A);

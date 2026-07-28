@@ -6,17 +6,21 @@ import '../pixel_crawler_game.dart';
 import 'door.dart';
 import 'dungeon_renderer.dart';
 
-/// Opaque panels around the current room so adjacent rooms never peek into
-/// the letterboxed / overflow camera area (BoI single-room framing).
+/// Safety mask around the current room (letterbox / any stray neighbour tile).
 ///
-/// Priority sits above north-door underpass sprites so neighbour doors/walls
-/// cannot draw on top of the mask.
-class RoomOccluder extends Component with HasGameReference<PixelCrawlerGame> {
-  RoomOccluder() : super(priority: Door.underpassPriority + 1);
+/// Primary isolation is [DungeonRenderer] baking only the active room; this
+/// covers anything that might still draw outside that rect.
+class RoomOccluder extends PositionComponent
+    with HasGameReference<PixelCrawlerGame> {
+  RoomOccluder()
+      : super(
+          position: Vector2.zero(),
+          size: Vector2.zero(),
+          priority: Door.underpassPriority + 1,
+        );
 
   static final _paint = ui.Paint()..color = const ui.Color(0xFF0E222B);
 
-  /// Large enough to cover any phone aspect when the room is fitted.
   static const _extent = 4000.0;
 
   @override
@@ -29,13 +33,17 @@ class RoomOccluder extends Component with HasGameReference<PixelCrawlerGame> {
     final right = (outer.left + outer.width) * tileSize;
     final bottom = (outer.top + outer.height) * tileSize;
 
-    // Above / below / left / right of the room (including wall ring).
     canvas.drawRect(
       ui.Rect.fromLTRB(left - _extent, top - _extent, right + _extent, top),
       _paint,
     );
     canvas.drawRect(
-      ui.Rect.fromLTRB(left - _extent, bottom, right + _extent, bottom + _extent),
+      ui.Rect.fromLTRB(
+        left - _extent,
+        bottom,
+        right + _extent,
+        bottom + _extent,
+      ),
       _paint,
     );
     canvas.drawRect(

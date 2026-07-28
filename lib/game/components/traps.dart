@@ -59,6 +59,10 @@ class SpikeTrap extends SpriteComponent
   @override
   void update(double dt) {
     super.update(dt);
+    final inRoom = tileInCurrentRoom(game, tile.x, tile.y);
+    opacity = inRoom ? 1 : 0;
+    if (!inRoom) return;
+
     _phaseTimer += dt;
     _damageCooldown -= dt;
     final prev = _phase;
