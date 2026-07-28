@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 
 import '../../config/game_assets.dart';
+import '../dungeon/dungeon_map.dart';
 import '../monsters.dart';
 import '../pixel_crawler_game.dart';
 import 'attacks.dart';
@@ -11,6 +12,7 @@ import 'monster.dart';
 import 'player.dart';
 import 'shop_pedestal.dart';
 import 'solid_obstacle.dart';
+import 'dungeon_renderer.dart';
 
 /// Base for items collected by touching them.
 abstract class Pickup extends SpriteAnimationComponent
@@ -50,11 +52,46 @@ abstract class Pickup extends SpriteAnimationComponent
 }
 
 class CoinPickup extends Pickup {
-  CoinPickup({required super.position});
+  CoinPickup({
+    required super.position,
+    this.autoCollect = false,
+  });
+
+  /// Monster drops fly to the player (also recovers coins that land in pits).
+  final bool autoCollect;
+  static const _magnetSpeed = 110.0;
 
   @override
   Future<void> onLoad() async {
     animation = GameAssets.coin.animation();
+  }
+
+  @override
+  void update(double dt) {
+    final player = game.player;
+    if (autoCollect && player != null && !player.isDead) {
+      final toPlayer = player.position - position;
+      final dist = toPlayer.length;
+      if (dist < 4) {
+        onCollected(player);
+        removeFromParent();
+        return;
+      }
+      position += toPlayer.normalized() * _magnetSpeed * dt;
+      priority = (position.y * 10).round();
+      return;
+    }
+
+    // Coins sitting in pits are unreachable on foot.
+    if (!autoCollect) {
+      final tx = position.x ~/ tileSize;
+      final ty = position.y ~/ tileSize;
+      if (game.map.tileAt(tx, ty) == TileType.pit) {
+        priority = (position.y * 10).round();
+        return;
+      }
+    }
+    super.update(dt);
   }
 
   @override
@@ -173,28 +210,36 @@ class Chest extends SpriteComponent
     if (player != null && player.position.distanceTo(position) < 16) {
       _open = true;
       sprite = GameAssets.chest.frame(1);
+      final toward = player.position - position;
+      final dir = toward.length2 > 0.01
+          ? toward.normalized()
+          : Vector2(0, 1);
+      Vector2 toss(double dist, [double side = 0]) {
+        final perp = Vector2(-dir.y, dir.x) * side;
+        return position + dir * dist + perp;
+      }
+
       final n = 2 + _rng.nextInt(3);
       for (var i = 0; i < n; i++) {
+        final side = (_rng.nextDouble() - 0.5) * 14;
         game.world.add(CoinPickup(
-          position: position +
-              Vector2((_rng.nextDouble() - 0.5) * 20, 4 + _rng.nextDouble() * 8),
+          position: toss(10 + _rng.nextDouble() * 10, side),
         ));
       }
-      if (_rng.nextDouble() < 0.35) {
-        game.world.add(PotionPickup.blue(
-          position: position + Vector2(0, 14),
+      // No blue (max-HP) potions from chests — only healing reds.
+      if (_rng.nextDouble() < 0.30) {
+        game.world.add(PotionPickup.red(
+          position: toss(14, (_rng.nextDouble() - 0.5) * 8),
         ));
       }
-      // Chance to drop a live bomb (dangerous loot).
       if (_rng.nextDouble() < 0.28) {
         game.world.add(BombPickup(
-          position: position + Vector2((_rng.nextDouble() - 0.5) * 12, 10),
+          position: toss(12, (_rng.nextDouble() - 0.5) * 10),
         ));
       }
-      // Normal keys drop from chests fairly often.
       if (_rng.nextDouble() < 0.45) {
         game.world.add(KeyPickup(
-          position: position + Vector2((_rng.nextDouble() - 0.5) * 10, 8),
+          position: toss(11, (_rng.nextDouble() - 0.5) * 8),
         ));
       }
     }

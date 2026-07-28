@@ -61,12 +61,19 @@ void main() {
     expect(bomb.fuse, closeTo(1.3, 0.001));
   });
 
-  test('spike phases cycle off → charging → on', () {
+  test('spike phases include charging and stay in unison', () {
     expect(SpikePhase.values, [
       SpikePhase.off,
       SpikePhase.charging,
       SpikePhase.on,
     ]);
+  });
+
+  test('monster coin pickups can auto-collect', () {
+    final coin = CoinPickup(position: Vector2.zero(), autoCollect: true);
+    expect(coin.autoCollect, isTrue);
+    final ground = CoinPickup(position: Vector2.zero());
+    expect(ground.autoCollect, isFalse);
   });
 
   test('boss render size is 1.5x the base sprite', () {

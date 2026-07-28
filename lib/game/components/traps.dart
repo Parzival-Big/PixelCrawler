@@ -9,6 +9,7 @@ import 'dungeon_renderer.dart';
 enum SpikePhase { off, charging, on }
 
 /// Spike trap with Off → Charging → On cycle. Damages only while On.
+/// All traps on a floor share the same phase (unison).
 class SpikeTrap extends SpriteComponent
     with HasGameReference<PixelCrawlerGame> {
   SpikeTrap({required this.tile, required this.big})
@@ -29,8 +30,9 @@ class SpikeTrap extends SpriteComponent
 
   int get damage => big ? 2 : 1;
 
-  double get _offDuration => big ? 1.15 : 0.95;
-  double get _chargeDuration => big ? 0.55 : 0.45;
+  // Shared cadence so every trap pulses together; charging reads clearly.
+  double get _offDuration => big ? 1.0 : 0.9;
+  double get _chargeDuration => big ? 0.95 : 0.85;
   double get _onDuration => big ? 0.7 : 0.55;
 
   double get _cycleLength => _offDuration + _chargeDuration + _onDuration;
@@ -38,9 +40,7 @@ class SpikeTrap extends SpriteComponent
   @override
   Future<void> onLoad() async {
     _sheet = big ? GameAssets.trapBig : GameAssets.trapSmall;
-    // Desync traps so a room doesn't pulse in perfect unison.
-    final seed = (tile.x * 17 + tile.y * 31) % 1000;
-    _phaseTimer = (seed / 1000.0) * _cycleLength;
+    _phaseTimer = 0;
     _applyPhaseFromTimer();
   }
 
@@ -64,7 +64,6 @@ class SpikeTrap extends SpriteComponent
     final prev = _phase;
     _applyPhaseFromTimer();
     if (_phase == SpikePhase.on && prev != SpikePhase.on) {
-      // Fresh On pulse: allow an immediate hit.
       _damageCooldown = 0;
     }
     if (_phase != SpikePhase.on) return;
