@@ -11,8 +11,8 @@ import 'solid_obstacle.dart';
 /// Door between rooms.
 ///
 /// Facing follows the wall of the *current* room (shared wall tiles flip
-/// when you enter the neighbour). North doors draw above the hero so it
-/// looks like they walk under the lintel / portcullis.
+/// when you enter the neighbour). Perimeter doors draw above the hero so
+/// it looks like they walk under the frame / lintel (not over it).
 class Door extends SpriteComponent
     with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   Door({required this.spawn})
@@ -29,10 +29,10 @@ class Door extends SpriteComponent
   bool open = false;
   DoorDir _displayDir = DoorDir.north;
 
-  /// Above any y-sorted character so north lintels cover the hero.
+  /// Above any y-sorted character so door frames cover the hero.
   static const underpassPriority = 100000;
 
-  /// Just above the baked dungeon, behind characters.
+  /// Just above the baked dungeon (unused for visible doors; kept for tests).
   static const behindPriority = -9995;
 
   @override
@@ -119,10 +119,8 @@ class Door extends SpriteComponent
 
   void _applyVisuals() {
     sprite = _specFor(opened: open, dir: _displayDir).sprite();
-    // North wall doors sit in front of the hero (walk-under lintel).
-    // Other sides stay behind so the hero walks in front of the frame.
-    priority =
-        _displayDir == DoorDir.north ? underpassPriority : behindPriority;
+    // Always in front of the hero so they pass under the frame on every wall.
+    priority = underpassPriority;
   }
 
   @override

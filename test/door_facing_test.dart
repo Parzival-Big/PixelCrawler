@@ -72,12 +72,7 @@ void main() {
         if (door.isOnPerimeterOf(room)) {
           visible++;
           expect(door.opacity, 1);
-          final facing = door.facingForRoom(room);
-          if (facing == DoorDir.north) {
-            expect(door.priority, Door.underpassPriority);
-          } else {
-            expect(door.priority, Door.behindPriority);
-          }
+          expect(door.priority, Door.underpassPriority);
         } else {
           expect(door.opacity, 0);
         }
