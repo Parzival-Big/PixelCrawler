@@ -8,24 +8,21 @@ import '../pixel_crawler_game.dart';
 
 const double tileSize = 16;
 
-/// Visual scale for dungeon tiles (floor, pit, stairs, walls, doors, torches).
-/// Pack art stays 16×16; we draw at 1.5× centred on each grid cell.
-const double tileVisualScale = 1.5;
+/// Visual scale for dungeon tiles (floor, walls, doors, torches, traps).
+/// Pack art is 16×16; keep drawing 1:1 (boss sprites stay 1.5× separately).
+const double tileVisualScale = 1.0;
 
 /// Alias kept for wall/door/torch call sites.
 const double wallVisualScale = tileVisualScale;
 
-/// Drawn size of a scaled dungeon tile sprite.
 double get tileVisualSize => tileSize * tileVisualScale;
 
 double get wallVisualSize => tileVisualSize;
 
-/// Extra pixels on each side when a 16px tile is drawn at [tileVisualScale].
 double get tileOverhang => (tileVisualSize - tileSize) / 2;
 
 double get wallOverhang => tileOverhang;
 
-/// Top-left offset so a 1.5× sprite stays centred on its tile.
 Vector2 tileVisualOffset([double ox = 0, double oy = 0]) =>
     Vector2(-tileOverhang + ox, -tileOverhang + oy);
 
@@ -81,7 +78,7 @@ class DungeonRenderer extends SpriteComponent
     final outer = room.outerBounds;
     final w = outer.width;
     final h = outer.height;
-    // Margin so 1.5× tile sprites are not clipped at the room edge.
+    // Margin so scaled tile sprites are not clipped at the room edge.
     final margin = tileOverhang;
     final imgW = w * tileSize + margin * 2;
     final imgH = h * tileSize + margin * 2;

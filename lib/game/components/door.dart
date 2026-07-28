@@ -10,24 +10,18 @@ import 'solid_obstacle.dart';
 
 /// Door between rooms.
 ///
-/// Facing follows the wall of the *current* room. When open, the dark
-/// opening draws *behind* the hero and the structural frame draws *in front*
-/// so the hero appears to walk under / through the doorway.
-///
-/// Frame vs opening depends on facing (from pack sprites):
-/// - North: bright lintel on top, dark threshold below
-/// - South: dark opening on top, bright wall face below
-/// - West: bright frame on the left, dark opening on the right
-/// - East: dark opening on the left, bright frame on the right
+/// One shared doorway cell → one open/closed state visible from both rooms.
+/// Facing follows the wall of the *current* room. When open, the dark opening
+/// draws behind the hero and the structural frame draws in front.
 class Door extends SpriteComponent
     with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   Door({required this.spawn})
       : _displayDir = spawn.dir,
         super(
           position: Vector2(
-            spawn.pos.x * tileSize,
-            spawn.pos.y * tileSize,
-          ) +
+                spawn.pos.x * tileSize,
+                spawn.pos.y * tileSize,
+              ) +
               wallVisualOffset(),
           size: Vector2.all(wallVisualSize),
           anchor: Anchor.topLeft,
@@ -48,7 +42,6 @@ class Door extends SpriteComponent
   DoorDir get displayDir => _displayDir;
 
   /// Structural frame drawn above the hero by [DoorLintel].
-  /// Coords are in the scaled (1.5×) local space of this component.
   Rect get frameRect {
     const s = wallVisualScale;
     switch (_displayDir) {
@@ -83,19 +76,38 @@ class Door extends SpriteComponent
   @override
   double get solidHeight => blocksPassage ? tileSize : 0;
 
-  /// Closed doors on the current room perimeter block feet and shots.
-  bool get blocksPassage => !open && opacity > 0;
+  /// Logical door cell (collision stays 16×16 even if the sprite scales).
+  Rect get doorTileRect => Rect.fromLTWH(
+        spawn.pos.x * tileSize,
+        spawn.pos.y * tileSize,
+        tileSize,
+        tileSize,
+      );
+
+  /// True when the player's feet still touch this doorway.
+  bool playerOverlapsDoorway() {
+    final p = game.player;
+    if (p == null || p.isDead) return false;
+    final feet = Rect.fromCenter(
+      center: Offset(p.position.x, p.position.y - p.feetHeight / 2),
+      width: p.feetWidth,
+      height: p.feetHeight,
+    );
+    return doorTileRect.overlaps(feet);
+  }
+
+  /// Closed doors block passage, unless the player is still overlapping the
+  /// doorway (avoids soft-locking when a door slams during a room transition).
+  bool get blocksPassage {
+    if (open || opacity <= 0) return false;
+    if (playerOverlapsDoorway()) return false;
+    return true;
+  }
 
   @override
   Rect get solidRect {
     if (!blocksPassage) return Rect.zero;
-    // Collision stays on the logical 16×16 tile, not the 1.5× visual.
-    return Rect.fromLTWH(
-      spawn.pos.x * tileSize,
-      spawn.pos.y * tileSize,
-      tileSize,
-      tileSize,
-    );
+    return doorTileRect;
   }
 
   DoorDir facingForRoom(RoomInfo? room) {
@@ -106,6 +118,12 @@ class Door extends SpriteComponent
   bool isOnPerimeterOf(RoomInfo? room) {
     if (room == null) return false;
     return _edgeOnRoom(room) != null;
+  }
+
+  bool connectsRoom(RoomInfo? room) {
+    if (room == null) return false;
+    if (spawn.roomKeys.contains(room.gridKey)) return true;
+    return isOnPerimeterOf(room);
   }
 
   DoorDir? _edgeOnRoom(RoomInfo room) {
@@ -126,7 +144,6 @@ class Door extends SpriteComponent
 
   @override
   Future<void> onLoad() async {
-    // Always start closed; unlock when the room is clear (Isaac-style).
     open = false;
     _displayDir = spawn.dir;
     opacity = 0;
@@ -159,7 +176,7 @@ class Door extends SpriteComponent
         DoorDir.west => GameAssets.doorBossW,
       };
     }
-    if (spawn.locked) {
+    if (spawn.locked && !spawn.unlocked) {
       return switch (dir) {
         DoorDir.north => GameAssets.doorLockedN,
         DoorDir.south => GameAssets.doorLockedS,
@@ -177,9 +194,14 @@ class Door extends SpriteComponent
 
   void _applyVisuals() {
     sprite = _specFor(opened: open, dir: _displayDir).sprite();
-    // Closed doors sit fully in front; open doors split opening/frame.
     priority = open ? behindPriority : underpassPriority;
     _lintel?.sync();
+  }
+
+  void setOpen(bool value) {
+    if (open == value) return;
+    open = value;
+    _applyVisuals();
   }
 
   @override
@@ -189,7 +211,6 @@ class Door extends SpriteComponent
       super.render(canvas);
       return;
     }
-    // Only the dark opening (under the hero).
     final openRect = openingRect;
     canvas.save();
     canvas.clipRect(openRect);
@@ -213,18 +234,17 @@ class Door extends SpriteComponent
       _applyVisuals();
     }
 
+    // Shared rule for both sides: seal while this room has monsters;
+    // open when clear (locked doors need a key once).
     final cleared = game.currentRoomCleared;
     if (!cleared) {
-      if (open) {
-        open = false;
-        _applyVisuals();
-      }
+      setOpen(false);
       return;
     }
 
-    // Room clear: unlock / open. Locked doors still need a key on contact.
     if (open) return;
-    if (spawn.locked) {
+
+    if (spawn.locked && !spawn.unlocked) {
       final player = game.player;
       if (player == null || player.isDead) return;
       final doorCenter = Vector2(
@@ -233,12 +253,11 @@ class Door extends SpriteComponent
       );
       if (player.position.distanceTo(doorCenter) > 20) return;
       if (game.tryUseKey()) {
-        open = true;
-        _applyVisuals();
+        spawn.unlocked = true;
+        setOpen(true);
       }
     } else {
-      open = true;
-      _applyVisuals();
+      setOpen(true);
     }
   }
 }

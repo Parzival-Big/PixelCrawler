@@ -42,8 +42,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     SessionBonus.reset();
   }
 
-  /// World size of one room including the wall ring (BoI single-room view),
-  /// plus overhang so 1.5× tile sprites fit in frame.
+  /// World size of one room including the wall ring (BoI single-room view).
   static const roomWorldWidth =
       (DungeonGenerator.interiorW + 2) * tileSize + tileSize * (tileVisualScale - 1);
   static const roomWorldHeight =
@@ -144,11 +143,78 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void discoverRoom(RoomInfo room) {
+    final previous = currentRoom;
     currentRoom = room;
     if (discoveredRooms.add(room.gridKey)) {
       roomMapNotifier.value++;
     }
+    // Leave the doorway before Isaac-style slam-shut can trap the player.
+    if (previous != null && previous.gridKey != room.gridKey) {
+      _ejectPlayerIntoRoom(room);
+    }
     focusCameraOnCurrentRoom();
+  }
+
+  /// Step from a shared doorway into the new room's floor so a closing door
+  /// cannot soft-lock the player on the threshold.
+  void _ejectPlayerIntoRoom(RoomInfo room) {
+    final p = player;
+    if (p == null) return;
+
+    final roomCenter = Vector2(
+      (room.bounds.left + room.bounds.width / 2) * tileSize,
+      (room.bounds.top + room.bounds.height / 2) * tileSize,
+    );
+
+    Door? arrival;
+    var bestDist = double.infinity;
+    for (final d in world.children.query<Door>()) {
+      if (!d.isOnPerimeterOf(room)) continue;
+      final doorCenter = Vector2(
+        d.spawn.pos.x * tileSize + tileSize / 2,
+        d.spawn.pos.y * tileSize + tileSize / 2,
+      );
+      final dist = p.position.distanceToSquared(doorCenter);
+      if (dist < bestDist && dist <= (tileSize * 2) * (tileSize * 2)) {
+        bestDist = dist;
+        arrival = d;
+      }
+    }
+    if (arrival == null) return;
+
+    final doorCenter = Vector2(
+      arrival.spawn.pos.x * tileSize + tileSize / 2,
+      arrival.spawn.pos.y * tileSize + tileSize / 2,
+    );
+
+    final candidates = <Vector2>[
+      Vector2(doorCenter.x, doorCenter.y - tileSize),
+      Vector2(doorCenter.x, doorCenter.y + tileSize),
+      Vector2(doorCenter.x - tileSize, doorCenter.y),
+      Vector2(doorCenter.x + tileSize, doorCenter.y),
+      Vector2(doorCenter.x, doorCenter.y - tileSize * 2),
+      Vector2(doorCenter.x, doorCenter.y + tileSize * 2),
+      Vector2(doorCenter.x - tileSize * 2, doorCenter.y),
+      Vector2(doorCenter.x + tileSize * 2, doorCenter.y),
+    ]..sort(
+        (a, b) => a
+            .distanceToSquared(roomCenter)
+            .compareTo(b.distanceToSquared(roomCenter)),
+      );
+
+    for (final pos in candidates) {
+      final gx = pos.x ~/ tileSize;
+      final gy = pos.y ~/ tileSize;
+      if (!map.isWalkable(gx, gy)) continue;
+      if (map.isDoorTile(gx, gy)) continue;
+      final info = map.roomInfoContaining(gx, gy);
+      if (info?.gridKey != room.gridKey) continue;
+      p.position = Vector2(
+        gx * tileSize + tileSize / 2,
+        gy * tileSize + tileSize - 2,
+      );
+      return;
+    }
   }
 
   void _syncRoomFromPlayer() {
@@ -166,8 +232,9 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
 
   @override
   void update(double dt) {
-    super.update(dt);
+    // Sync room before doors update so slam-shut + eject happen together.
     _syncRoomFromPlayer();
+    super.update(dt);
   }
 
   /// Repositions virtual controls for the current canvas / hinge insets.
