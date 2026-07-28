@@ -576,6 +576,46 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     pauseEngine();
   }
 
+  /// Starts a fresh dungeon run with the same [heroType] (RIPROVA).
+  Future<void> restartRun() async {
+    SessionBonus.reset();
+
+    for (final name in [
+      Overlays.gameOver,
+      Overlays.pause,
+      Overlays.shop,
+      Overlays.unlock,
+      Overlays.floorTransition,
+    ]) {
+      if (overlays.isActive(name)) {
+        overlays.remove(name);
+      }
+    }
+
+    floor = 1;
+    coins = 0;
+    kills = 0;
+    keys = 0;
+    bossKeys = 0;
+    floorsWithoutShop = 0;
+    lastUnlocked = {};
+    discoveredRooms.clear();
+    currentRoom = null;
+
+    floorNotifier.value = 1;
+    coinsNotifier.value = 0;
+    keysNotifier.value = 0;
+    bossKeysNotifier.value = 0;
+
+    final def = heroes[heroType]!;
+    player = Player(def: def, position: Vector2.zero());
+    hpNotifier.value = player!.maxHp;
+    maxHpNotifier.value = player!.maxHp;
+
+    await _loadFloor();
+    resumeEngine();
+  }
+
   /// Banks any run coins still held (used when quitting from pause).
   Future<void> bankAndQuit() async {
     await SaveService.instance.reportRunEnded(coins: coins, kills: kills);
