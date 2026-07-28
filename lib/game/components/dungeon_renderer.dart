@@ -8,18 +8,29 @@ import '../pixel_crawler_game.dart';
 
 const double tileSize = 16;
 
-/// Visual scale for walls, doors and wall torches (pack tiles stay 16²).
-const double wallVisualScale = 1.5;
+/// Visual scale for dungeon tiles (floor, pit, stairs, walls, doors, torches).
+/// Pack art stays 16×16; we draw at 1.5× centred on each grid cell.
+const double tileVisualScale = 1.5;
 
-/// Drawn size of a wall / door / wall-torch sprite.
-double get wallVisualSize => tileSize * wallVisualScale;
+/// Alias kept for wall/door/torch call sites.
+const double wallVisualScale = tileVisualScale;
 
-/// Extra pixels on each side when a 16px tile is drawn at [wallVisualScale].
-double get wallOverhang => (wallVisualSize - tileSize) / 2;
+/// Drawn size of a scaled dungeon tile sprite.
+double get tileVisualSize => tileSize * tileVisualScale;
+
+double get wallVisualSize => tileVisualSize;
+
+/// Extra pixels on each side when a 16px tile is drawn at [tileVisualScale].
+double get tileOverhang => (tileVisualSize - tileSize) / 2;
+
+double get wallOverhang => tileOverhang;
 
 /// Top-left offset so a 1.5× sprite stays centred on its tile.
+Vector2 tileVisualOffset([double ox = 0, double oy = 0]) =>
+    Vector2(-tileOverhang + ox, -tileOverhang + oy);
+
 Vector2 wallVisualOffset([double ox = 0, double oy = 0]) =>
-    Vector2(-wallOverhang + ox, -wallOverhang + oy);
+    tileVisualOffset(ox, oy);
 
 /// True when tile (tx, ty) lies in the current room's wall ring + interior.
 bool tileInCurrentRoom(PixelCrawlerGame game, int tx, int ty) {
@@ -70,8 +81,8 @@ class DungeonRenderer extends SpriteComponent
     final outer = room.outerBounds;
     final w = outer.width;
     final h = outer.height;
-    // Margin so 1.5× wall sprites are not clipped at the room edge.
-    final margin = wallOverhang;
+    // Margin so 1.5× tile sprites are not clipped at the room edge.
+    final margin = tileOverhang;
     final imgW = w * tileSize + margin * 2;
     final imgH = h * tileSize + margin * 2;
     final recorder = ui.PictureRecorder();
@@ -80,8 +91,7 @@ class DungeonRenderer extends SpriteComponent
     final floorSheet = GameAssets.floorTiles;
     final stairsSprite = GameAssets.stairs.sprite();
     final aoPaint = ui.Paint()..color = const ui.Color(0x3D000000);
-    final floorSize = Vector2.all(tileSize);
-    final wallSize = Vector2.all(wallVisualSize);
+    final drawSize = Vector2.all(tileVisualSize);
     final bg = ui.Paint()..color = const ui.Color(0xFF0E222B);
     canvas.drawRect(ui.Rect.fromLTWH(0, 0, imgW, imgH), bg);
 
@@ -91,6 +101,7 @@ class DungeonRenderer extends SpriteComponent
         final ty = outer.top + y;
         final t = map.tileAt(tx, ty);
         final pos = Vector2(margin + x * tileSize, margin + y * tileSize);
+        final drawPos = pos + tileVisualOffset();
         switch (t) {
           case TileType.empty:
             break;
@@ -99,20 +110,33 @@ class DungeonRenderer extends SpriteComponent
             final variant = r < 20 ? r % 2 : (r == 20 ? 2 : 3);
             floorSheet.frame(variant).render(
                   canvas,
-                  position: pos,
-                  size: floorSize,
+                  position: drawPos,
+                  size: drawSize,
                 );
             if (map.tileAt(tx, ty - 1) == TileType.wall) {
               canvas.drawRect(
-                ui.Rect.fromLTWH(pos.x, pos.y, tileSize, 3),
+                ui.Rect.fromLTWH(
+                  pos.x,
+                  pos.y,
+                  tileSize,
+                  3 * tileVisualScale,
+                ),
                 aoPaint,
               );
             }
           case TileType.trapSmall:
           case TileType.trapBig:
-            floorSheet.frame(0).render(canvas, position: pos, size: floorSize);
+            floorSheet.frame(0).render(
+                  canvas,
+                  position: drawPos,
+                  size: drawSize,
+                );
           case TileType.pit:
-            GameAssets.pit.sprite().render(canvas, position: pos, size: floorSize);
+            GameAssets.pit.sprite().render(
+                  canvas,
+                  position: drawPos,
+                  size: drawSize,
+                );
           case TileType.wall:
             // Doors / torches replace the wall face; still bake a base tile.
             final name = wallTileNameFor(map, tx, ty, room: room);
@@ -121,12 +145,12 @@ class DungeonRenderer extends SpriteComponent
               final variant = (tx * 7 + ty * 13) % (sheet.frames >= 2 ? 2 : 1);
               sheet.frame(variant).render(
                     canvas,
-                    position: pos + wallVisualOffset(),
-                    size: wallSize,
+                    position: drawPos,
+                    size: drawSize,
                   );
             }
           case TileType.stairs:
-            stairsSprite.render(canvas, position: pos, size: floorSize);
+            stairsSprite.render(canvas, position: drawPos, size: drawSize);
         }
       }
     }
