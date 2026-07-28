@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../game/heroes.dart';
 import '../../game/pixel_crawler_game.dart';
+import '../adaptive.dart';
 import '../overlays/shop_overlay.dart';
 import '../theme.dart';
 import '../widgets/pixel_widgets.dart';
@@ -71,7 +72,7 @@ class _Hud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return AdaptiveSafeArea(
       child: Stack(
         children: [
           Padding(
@@ -368,7 +369,7 @@ class _UnlockToastState extends State<_UnlockToast> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return AdaptiveSafeArea(
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Padding(

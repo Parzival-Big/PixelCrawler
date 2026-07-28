@@ -16,6 +16,15 @@ Esplora un dungeon infinito generato proceduralmente, sconfiggi i mostri, raccog
 
 Lo sblocco dello Slime (e i record) sono salvati in locale sul dispositivo. Tra un piano e l’altro, con una piccola probabilità (~5%), può apparire un **mercante temporaneo**: le monete della run si spendono lì per potenziamenti (cura, vita, danno, velocità, raffica) che valgono **solo fino alla fine della run**.
 
+## Dispositivi
+
+L’app supporta **telefoni, tablet e foldable**:
+
+- tutte le orientazioni (chiuso in portrait, aperto in landscape);
+- la camera e i controlli virtuali si **riadattano al volo** al cambio dimensioni, senza riavviare l’app;
+- UI e HUD evitano la **cerniera** (`MediaQuery.displayFeatures`);
+- su Android l’Activity dichiara `resizeableActivity` e `configChanges` completi così fold/unfold non ricreano il processo.
+
 ## Controlli
 
 - **Joystick virtuale** (sinistra) per muoversi

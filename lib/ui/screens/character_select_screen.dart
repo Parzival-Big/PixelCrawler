@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../game/heroes.dart';
 import '../../services/save_service.dart';
+import '../adaptive.dart';
 import '../theme.dart';
 import '../widgets/pixel_sprite.dart';
 import '../widgets/pixel_widgets.dart';
@@ -13,8 +14,9 @@ class CharacterSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final save = SaveService.instance;
+    final mq = MediaQuery.of(context);
     return Scaffold(
-      body: SafeArea(
+      body: AdaptiveSafeArea(
         child: Column(
           children: [
             const SizedBox(height: 12),
@@ -23,16 +25,16 @@ class CharacterSelectScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 PixelButton(
                   label: '<',
-                  fontSize: 12,
+                  fontSize: adaptiveFont(context, 12),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'SCEGLI IL TUO EROE',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: pixelFont,
-                      fontSize: 14,
+                      fontSize: adaptiveFont(context, 14),
                       color: PixelColors.gold,
                     ),
                   ),
@@ -41,19 +43,56 @@ class CharacterSelectScreen extends StatelessWidget {
               ],
             ),
             Expanded(
-              child: Center(
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  itemCount: heroes.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 16),
-                  itemBuilder: (context, i) {
-                    final def = heroes.values.elementAt(i);
-                    final locked = def.unlockable && !save.slimeUnlocked;
-                    return _HeroCard(def: def, locked: locked);
-                  },
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final cards = [
+                    for (final def in heroes.values)
+                      _HeroCard(
+                        def: def,
+                        locked: def.unlockable && !save.slimeUnlocked,
+                      ),
+                  ];
+
+                  // Portrait / folded: vertical list. Wide tablet: wrap grid.
+                  // Phone landscape: horizontal carousel.
+                  if (mq.isPortrait) {
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      itemCount: cards.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (_, i) => Center(child: cards[i]),
+                    );
+                  }
+                  if (mq.isTablet && constraints.maxWidth >= 900) {
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      child: Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: cards,
+                      ),
+                    );
+                  }
+                  return Center(
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      itemCount: cards.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 16),
+                      itemBuilder: (_, i) => cards[i],
+                    ),
+                  );
+                },
               ),
             ),
           ],

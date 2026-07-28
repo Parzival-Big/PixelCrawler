@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../game/pixel_crawler_game.dart';
 import '../../game/store_catalog.dart';
 import '../../game/components/player.dart';
+import '../adaptive.dart';
 import '../theme.dart';
 import '../widgets/pixel_widgets.dart';
 
@@ -37,7 +38,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
     final game = widget.game;
     return Container(
       color: const Color(0xDD0E222B),
-      child: SafeArea(
+      child: AdaptiveSafeArea(
         child: Column(
           children: [
             const SizedBox(height: 10),
@@ -51,7 +52,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Potenziamenti validi solo per questa run',
+              'Apparizione casuale tra i piani · solo questa run',
               style: TextStyle(
                 fontFamily: pixelFont,
                 fontSize: 7,

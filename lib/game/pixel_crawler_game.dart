@@ -1,4 +1,4 @@
-import 'dart:math' show Random;
+import 'dart:math' show Random, min;
 
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
@@ -7,10 +7,11 @@ import 'package:flame/input.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart' show KeyEventResult;
+import 'package:flutter/widgets.dart' show KeyEventResult, MediaQuery;
 
 import '../config/game_assets.dart';
 import '../services/save_service.dart';
+import '../ui/adaptive.dart';
 import 'components/dungeon_renderer.dart';
 import 'components/effects.dart';
 import 'components/monster.dart';
@@ -33,12 +34,13 @@ class Overlays {
 }
 
 class PixelCrawlerGame extends FlameGame with KeyboardEvents {
-  PixelCrawlerGame({required this.heroType})
-      : super(
-          camera: CameraComponent.withFixedResolution(width: 384, height: 216),
-        ) {
+  PixelCrawlerGame({required this.heroType}) : super() {
     SessionBonus.reset();
   }
+
+  /// Vertical world units kept on screen — tablets/unfolded foldables show
+  /// more of the dungeon horizontally while keeping the same vertical FOV.
+  static const designHeight = 216.0;
 
   final HeroType heroType;
   final _rng = Random();
@@ -55,7 +57,9 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   late final coinsNotifier = ValueNotifier<int>(0);
   late final floorNotifier = ValueNotifier<int>(1);
 
-  late final JoystickComponent _joystick;
+  late JoystickComponent _joystick;
+  late HudButtonComponent _attackButton;
+  bool _hudReady = false;
   bool _attackButtonHeld = false;
   final _keysDown = <LogicalKeyboardKey>{};
 
@@ -68,35 +72,77 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   Color backgroundColor() => const Color(0xFF0E222B);
 
   @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    fitCameraToSize(size);
+    layoutHudControls(size);
+  }
+
+  /// Public so tests can exercise resize without a full Flutter bind.
+  void fitCameraToSize(Vector2 size) {
+    if (size.y <= 0) return;
+    camera.viewfinder.zoom = size.y / designHeight;
+  }
+
+  /// Repositions virtual controls for the current canvas / hinge insets.
+  void layoutHudControls(Vector2 size) {
+    if (!_hudReady || size.x <= 0 || size.y <= 0) return;
+    final shortest = min(size.x, size.y);
+    final edge = (shortest * 0.045).clamp(16.0, 52.0);
+    var left = edge;
+    var right = edge;
+    var bottom = edge;
+
+    final ctx = buildContext;
+    if (ctx != null && ctx.mounted) {
+      final mq = MediaQuery.maybeOf(ctx);
+      if (mq != null) {
+        left += mq.hingePadding.left + mq.padding.left * 0.35;
+        right += mq.hingePadding.right + mq.padding.right * 0.35;
+        bottom += mq.hingePadding.bottom + mq.padding.bottom * 0.35;
+      }
+    }
+
+    _joystick.margin = EdgeInsets.only(left: left, bottom: bottom);
+    _attackButton.margin = EdgeInsets.only(right: right, bottom: bottom);
+  }
+
+  @override
   Future<void> onLoad() async {
     await images.loadAll(GameAssets.allImages);
+    fitCameraToSize(size);
+
+    final scale = (size.y / designHeight).clamp(0.9, 2.0);
+    final stickR = 30.0 * scale;
+    final knobR = 13.0 * scale;
+    final btnR = 21.0 * scale;
 
     _joystick = JoystickComponent(
       knob: CircleComponent(
-        radius: 13,
+        radius: knobR,
         paint: Paint()..color = const Color(0x88B9DDA7),
       ),
       background: CircleComponent(
-        radius: 30,
+        radius: stickR,
         paint: Paint()..color = const Color(0x2EB9DDA7),
       ),
       margin: const EdgeInsets.only(left: 24, bottom: 20),
     );
 
-    final attackButton = HudButtonComponent(
+    _attackButton = HudButtonComponent(
       button: CircleComponent(
-        radius: 21,
+        radius: btnR,
         paint: Paint()..color = const Color(0x4468A08A),
         children: [
           CircleComponent(
-            radius: 16,
-            position: Vector2.all(5),
+            radius: btnR * 0.75,
+            position: Vector2.all(btnR * 0.25),
             paint: Paint()..color = const Color(0x99B9DDA7),
           ),
         ],
       ),
       buttonDown: CircleComponent(
-        radius: 21,
+        radius: btnR,
         paint: Paint()..color = const Color(0xCCB9DDA7),
       ),
       margin: const EdgeInsets.only(right: 24, bottom: 18),
@@ -105,7 +151,9 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       onCancelled: () => _attackButtonHeld = false,
     );
 
-    camera.viewport.addAll([_joystick, attackButton]);
+    camera.viewport.addAll([_joystick, _attackButton]);
+    _hudReady = true;
+    layoutHudControls(size);
 
     final def = heroes[heroType]!;
     player = Player(def: def, position: Vector2.zero());
