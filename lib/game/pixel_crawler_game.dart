@@ -419,6 +419,32 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
 
   // ------------------------------------------------------------ events
 
+  /// True when a closed door occupies this tile (blocks player and monsters).
+  bool doorBlocksTile(int tx, int ty) {
+    for (final d in world.children.query<Door>()) {
+      if (d.spawn.pos.x == tx && d.spawn.pos.y == ty && d.blocksPassage) {
+        return true;
+      }
+    }
+    // Fallback for monsters: any door tile is blocked if no component match.
+    return false;
+  }
+
+  /// No living monsters in the active room (doors may open).
+  bool get currentRoomCleared {
+    final room = currentRoom;
+    if (room == null) return true;
+    for (final m in world.children.query<Monster>()) {
+      if (m.isDead) continue;
+      final info = map.roomInfoContaining(
+        m.position.x ~/ tileSize,
+        m.position.y ~/ tileSize,
+      );
+      if (info?.gridKey == room.gridKey) return false;
+    }
+    return true;
+  }
+
   /// True when a feet box centred at ([cx], [cy]) overlaps any solid prop.
   bool solidBlocksFeet(double cx, double cy, double w, double h) {
     for (final o in world.children.whereType<SolidObstacle>()) {

@@ -79,13 +79,16 @@ class Door extends SpriteComponent
   }
 
   @override
-  double get solidWidth => open ? 0 : tileSize;
+  double get solidWidth => blocksPassage ? tileSize : 0;
   @override
-  double get solidHeight => open ? 0 : tileSize;
+  double get solidHeight => blocksPassage ? tileSize : 0;
+
+  /// Closed doors on the current room perimeter block feet and shots.
+  bool get blocksPassage => !open && opacity > 0;
 
   @override
   Rect get solidRect {
-    if (open) return Rect.zero;
+    if (!blocksPassage) return Rect.zero;
     // Collision stays on the logical 16×16 tile, not the 1.5× visual.
     return Rect.fromLTWH(
       spawn.pos.x * tileSize,
@@ -123,7 +126,8 @@ class Door extends SpriteComponent
 
   @override
   Future<void> onLoad() async {
-    open = !spawn.locked;
+    // Always start closed; unlock when the room is clear (Isaac-style).
+    open = false;
     _displayDir = spawn.dir;
     opacity = 0;
     _lintel = DoorLintel(door: this);
@@ -209,17 +213,25 @@ class Door extends SpriteComponent
       _applyVisuals();
     }
 
+    final cleared = game.currentRoomCleared;
+    if (!cleared) {
+      if (open) {
+        open = false;
+        _applyVisuals();
+      }
+      return;
+    }
+
+    // Room clear: unlock / open. Locked doors still need a key on contact.
     if (open) return;
-    final player = game.player;
-    if (player == null || player.isDead) return;
-
-    final doorCenter = Vector2(
-      spawn.pos.x * tileSize + tileSize / 2,
-      spawn.pos.y * tileSize + tileSize / 2,
-    );
-    if (player.position.distanceTo(doorCenter) > 20) return;
-
     if (spawn.locked) {
+      final player = game.player;
+      if (player == null || player.isDead) return;
+      final doorCenter = Vector2(
+        spawn.pos.x * tileSize + tileSize / 2,
+        spawn.pos.y * tileSize + tileSize / 2,
+      );
+      if (player.position.distanceTo(doorCenter) > 20) return;
       if (game.tryUseKey()) {
         open = true;
         _applyVisuals();

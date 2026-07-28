@@ -11,43 +11,69 @@ class RoomLayouts {
 
   final Random _rng;
 
-  void apply(DungeonMap map, Rectangle<int> room, RoomKind kind) {
+  void apply(DungeonMap map, Rectangle<int> room, RoomKind kind, {int floor = 1}) {
     switch (kind) {
       case RoomKind.start:
-        _lightDecor(map, room);
+        _startVariant(map, room, floor);
       case RoomKind.shop:
         break; // pedestals placed by generator
       case RoomKind.boss:
-        _bossArena(map, room);
+        _bossArena(map, room, floor);
       case RoomKind.treasure:
         _treasureGauntlet(map, room);
       case RoomKind.combat:
-        _combatVariant(map, room);
+        _combatVariant(map, room, floor);
     }
   }
 
-  void _combatVariant(DungeonMap map, Rectangle<int> room) {
-    switch (_rng.nextInt(6)) {
+  void _startVariant(DungeonMap map, Rectangle<int> room, int floor) {
+    switch (_rng.nextInt(3)) {
       case 0:
-        _crossPit(map, room);
+        _lightDecor(map, room);
       case 1:
-        _spikeCheckerboard(map, room);
-      case 2:
-        _bridgeLanes(map, room);
-      case 3:
-        _diagonalBridges(map, room);
-      case 4:
-        _storage(map, room);
+        _scatterDecor(map, room, 2 + _rng.nextInt(2));
+        _tryPillars(map, room, cornersOnly: true);
       default:
-        _chokepointTraps(map, room);
+        _lightDecor(map, room);
+        if (floor > 1 && _rng.nextDouble() < 0.4) {
+          _ringFloorMarks(map, room);
+        }
     }
   }
+
+  void _combatVariant(DungeonMap map, Rectangle<int> room, int floor) {
+    // Growing pool with floor so later runs feel less repetitive.
+    final pool = <void Function(DungeonMap, Rectangle<int>)>[
+      _crossPit,
+      _spikeCheckerboard,
+      _bridgeLanes,
+      _diagonalBridges,
+      _storage,
+      _chokepointTraps,
+      _fourPillars,
+      _centerArena,
+      _sideGalleries,
+      _zigzagBridge,
+      _sparseHazards,
+      _quadPits,
+    ];
+    final unlocked = (6 + (floor - 1)).clamp(6, pool.length);
+    // Avoid reusing the same stamp twice in a row on a floor.
+    var idx = _rng.nextInt(unlocked);
+    if (_lastCombatIdx == idx && unlocked > 1) {
+      idx = (idx + 1 + _rng.nextInt(unlocked - 1)) % unlocked;
+    }
+    _lastCombatIdx = idx;
+    pool[idx](map, room);
+  }
+
+  int? _lastCombatIdx;
 
   void _lightDecor(DungeonMap map, Rectangle<int> room) {
     _scatterDecor(map, room, 1 + _rng.nextInt(2));
   }
 
-  void _bossArena(DungeonMap map, Rectangle<int> room) {
+  void _bossArena(DungeonMap map, Rectangle<int> room, int floor) {
     // Corner pit pockets; open arena in the middle.
     for (final c in [
       Point(room.left + 1, room.top + 1),
@@ -58,6 +84,12 @@ class RoomLayouts {
       _tryPit(map, c.x, c.y);
       _tryPit(map, c.x + (c.x < room.left + room.width / 2 ? 1 : -1), c.y);
       _tryPit(map, c.x, c.y + (c.y < room.top + room.height / 2 ? 1 : -1));
+    }
+    if (floor >= 3 && _rng.nextDouble() < 0.5) {
+      final cx = room.left + room.width ~/ 2;
+      final cy = room.top + room.height ~/ 2;
+      _tryTrap(map, cx - 2, cy, big: true);
+      _tryTrap(map, cx + 2, cy, big: true);
     }
   }
 
@@ -201,6 +233,120 @@ class RoomLayouts {
         _tryTrap(map, cx + 1, y, big: false);
       }
       i++;
+    }
+  }
+
+  /// Four solid pillars inset from the corners.
+  void _fourPillars(DungeonMap map, Rectangle<int> room) {
+    _tryPillars(map, room, cornersOnly: false);
+    _scatterDecor(map, room, 1 + _rng.nextInt(2));
+    final cx = room.left + room.width ~/ 2;
+    final cy = room.top + room.height ~/ 2;
+    _tryTrap(map, cx, cy, big: true);
+  }
+
+  /// Mostly open floor with a ring of small traps and sparse decor.
+  void _centerArena(DungeonMap map, Rectangle<int> room) {
+    final cx = room.left + room.width ~/ 2;
+    final cy = room.top + room.height ~/ 2;
+    for (var y = room.top + 2; y < room.top + room.height - 2; y++) {
+      for (var x = room.left + 2; x < room.left + room.width - 2; x++) {
+        final dx = (x - cx).abs();
+        final dy = (y - cy).abs();
+        if (dx == 3 || dy == 3) {
+          _tryTrap(map, x, y, big: false);
+        }
+      }
+    }
+    _scatterDecor(map, room, 2 + _rng.nextInt(3));
+  }
+
+  /// Vertical galleries on the sides with a clear center lane.
+  void _sideGalleries(DungeonMap map, Rectangle<int> room) {
+    final cx = room.left + room.width ~/ 2;
+    for (var y = room.top + 1; y < room.top + room.height - 1; y++) {
+      for (var x = room.left + 1; x < room.left + room.width - 1; x++) {
+        if ((x - cx).abs() >= 3) {
+          if ((y + x).isEven) {
+            _tryPit(map, x, y);
+          } else {
+            _tryTrap(map, x, y, big: false);
+          }
+        }
+      }
+    }
+    _scatterDecor(map, room, 1);
+  }
+
+  /// Zigzag safe path across an otherwise pitted room.
+  void _zigzagBridge(DungeonMap map, Rectangle<int> room) {
+    final path = <Point<int>>{};
+    var x = room.left + 1;
+    var y = room.top + room.height ~/ 2;
+    var dir = 1;
+    while (x < room.left + room.width - 1) {
+      path.add(Point(x, y));
+      path.add(Point(x, y + dir));
+      y += dir;
+      if (y <= room.top + 1 || y >= room.top + room.height - 2) dir = -dir;
+      x++;
+    }
+    for (var py = room.top + 1; py < room.top + room.height - 1; py++) {
+      for (var px = room.left + 1; px < room.left + room.width - 1; px++) {
+        if (!path.contains(Point(px, py))) _tryPit(map, px, py);
+      }
+    }
+  }
+
+  /// Light combat room: few traps, more props — breathing room between denser stamps.
+  void _sparseHazards(DungeonMap map, Rectangle<int> room) {
+    _scatterDecor(map, room, 3 + _rng.nextInt(3));
+    final cx = room.left + room.width ~/ 2;
+    final cy = room.top + room.height ~/ 2;
+    _tryTrap(map, cx - 3, cy - 2, big: false);
+    _tryTrap(map, cx + 3, cy + 2, big: false);
+    _tryTrap(map, cx + 2, cy - 3, big: true);
+  }
+
+  /// Four pit blocks in the quadrants with a cross of floor between them.
+  void _quadPits(DungeonMap map, Rectangle<int> room) {
+    final cx = room.left + room.width ~/ 2;
+    final cy = room.top + room.height ~/ 2;
+    for (var y = room.top + 1; y < room.top + room.height - 1; y++) {
+      for (var x = room.left + 1; x < room.left + room.width - 1; x++) {
+        final onCross = x == cx || y == cy;
+        final inQuad = (x - cx).abs() >= 2 && (y - cy).abs() >= 2;
+        if (!onCross && inQuad) _tryPit(map, x, y);
+      }
+    }
+    _tryTrap(map, cx, cy, big: false);
+  }
+
+  void _tryPillars(DungeonMap map, Rectangle<int> room, {required bool cornersOnly}) {
+    final points = <Point<int>>[
+      Point(room.left + 2, room.top + 2),
+      Point(room.left + room.width - 3, room.top + 2),
+      Point(room.left + 2, room.top + room.height - 3),
+      Point(room.left + room.width - 3, room.top + room.height - 3),
+    ];
+    if (!cornersOnly) {
+      points.addAll([
+        Point(room.left + 2, room.top + room.height ~/ 2),
+        Point(room.left + room.width - 3, room.top + room.height ~/ 2),
+      ]);
+    }
+    for (final p in points) {
+      if (map.tileAt(p.x, p.y) == TileType.floor) {
+        map.decorSpawns.add((p, _rng.nextInt(3)));
+      }
+    }
+  }
+
+  void _ringFloorMarks(DungeonMap map, Rectangle<int> room) {
+    // Soft flavour: a few traps near walls only.
+    for (var x = room.left + 2; x < room.left + room.width - 2; x += 3) {
+      _tryTrap(map, x, room.top + 2, big: false);
+      _tryTrap(map, x, room.top + room.height - 3, big: false);
     }
   }
 

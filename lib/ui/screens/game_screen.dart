@@ -79,13 +79,28 @@ class _HudOverlay extends StatelessWidget {
     return AdaptiveSafeArea(
       child: Stack(
         children: [
-          // Hearts + coins/keys — top left
+          // Floor + hearts + coins/keys — top left
           Padding(
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                ValueListenableBuilder<int>(
+                  valueListenable: game.floorNotifier,
+                  builder: (_, floor, _) => Text(
+                    'PIANO $floor',
+                    style: const TextStyle(
+                      fontFamily: pixelFont,
+                      fontSize: 12,
+                      color: PixelColors.gold,
+                      shadows: [
+                        Shadow(color: Color(0xFF000000), offset: Offset(2, 2)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
                 _HeartsRow(game: game),
                 const SizedBox(height: 6),
                 Row(
@@ -150,27 +165,6 @@ class _HudOverlay extends StatelessWidget {
                   ],
                 ),
               ],
-            ),
-          ),
-          // Floor label — top center
-          Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: ValueListenableBuilder<int>(
-                valueListenable: game.floorNotifier,
-                builder: (_, floor, _) => Text(
-                  'PIANO $floor',
-                  style: const TextStyle(
-                    fontFamily: pixelFont,
-                    fontSize: 12,
-                    color: PixelColors.gold,
-                    shadows: [
-                      Shadow(color: Color(0xFF000000), offset: Offset(2, 2)),
-                    ],
-                  ),
-                ),
-              ),
             ),
           ),
           // Pause — top right

@@ -144,7 +144,8 @@ class DungeonRenderer extends SpriteComponent
   }
 }
 
-/// Soft additive glow used under torches and fire pots.
+/// Soft lighting around torches / fire pots: warm additive glow plus a
+/// circular multiply shade so wall darkening reads round, not rectangular.
 class GlowComponent extends PositionComponent
     with HasGameReference<PixelCrawlerGame> {
   GlowComponent({
@@ -152,13 +153,17 @@ class GlowComponent extends PositionComponent
     this.radius = 26,
     this.tileX,
     this.tileY,
-  }) : super(position: center, priority: -9999, anchor: Anchor.center);
+    this.shadeWalls = true,
+  }) : super(position: center, priority: -9985, anchor: Anchor.center);
 
   final double radius;
 
   /// When set, glow only renders while this tile is in the current room.
   final int? tileX;
   final int? tileY;
+
+  /// Draw a soft circular darkening (walls + floor) under the bright glow.
+  final bool shadeWalls;
 
   double _t = 0;
   bool _visible = true;
@@ -177,6 +182,24 @@ class GlowComponent extends PositionComponent
     final flicker =
         1 + 0.06 * (_t * 7).remainder(1.0) * ((_t * 13).floor().isEven ? 1 : -1);
     final r = radius * flicker;
+
+    if (shadeWalls) {
+      // Circular wall/floor darkening (reads round instead of the torch tile box).
+      final mul = ui.Paint()
+        ..shader = ui.Gradient.radial(
+          ui.Offset.zero,
+          r * 0.95,
+          const [
+            ui.Color(0xFF5A6E64),
+            ui.Color(0xFF8A9A8E),
+            ui.Color(0xFFFFFFFF),
+          ],
+          const [0.0, 0.5, 1.0],
+        )
+        ..blendMode = ui.BlendMode.modulate;
+      canvas.drawCircle(ui.Offset.zero, r * 0.95, mul);
+    }
+
     final paint = ui.Paint()
       ..shader = ui.Gradient.radial(
         ui.Offset.zero,

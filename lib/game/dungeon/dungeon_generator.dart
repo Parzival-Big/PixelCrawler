@@ -108,7 +108,7 @@ class DungeonGenerator {
         gridX: node.gx,
         gridY: node.gy,
       ));
-      layouts.apply(map, interior, kindOf(e.key));
+      layouts.apply(map, interior, kindOf(e.key), floor: floor);
       _clearDoorApproaches(map, interior);
       _ensureInternalConnectivity(map, interior);
     }
