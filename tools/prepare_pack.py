@@ -86,7 +86,14 @@ def tiles():
         save(strip([raw(pattern.format(i)) for i in range(5)]),
              "tiles", f"{name}.png")
 
-    # Animated torch mounted on a south-facing wall.
+    # Animated wall torches — one strip per wall side (pack top/bottom/left/right).
+    for side in ("top", "bottom", "left", "right"):
+        save(
+            strip([raw(f"wall_stone_torch_frame_{side}_{i}.png") for i in range(4)]),
+            "tiles",
+            f"torch_wall_{side}.png",
+        )
+    # Legacy alias (south / bottom wall).
     save(strip([raw(f"wall_stone_torch_frame_bottom_{i}.png") for i in range(4)]),
          "tiles", "torch_wall.png")
 

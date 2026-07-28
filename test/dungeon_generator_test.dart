@@ -62,11 +62,16 @@ void main() {
                 reason: 'entity at $p must be on a walkable tile');
           }
 
-          // Every torch hangs on a south wall with floor into the room (north).
+          // Every torch hangs on a wall with the matching pack side facing floor.
           for (final t in map.torchSpawns) {
-            expect(map.tileAt(t.x, t.y), TileType.wall);
-            expect(map.isWalkable(t.x, t.y - 1), isTrue);
-            expect(map.isDoorTile(t.x, t.y), isFalse);
+            expect(map.tileAt(t.pos.x, t.pos.y), TileType.wall);
+            expect(map.isDoorTile(t.pos.x, t.pos.y), isFalse);
+            final d = t.side.floorDelta;
+            expect(
+              map.isWalkable(t.pos.x + d.x, t.pos.y + d.y),
+              isTrue,
+              reason: 'torch ${t.side} at ${t.pos} needs floor toward room',
+            );
           }
         });
       }

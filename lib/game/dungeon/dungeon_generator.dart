@@ -451,23 +451,56 @@ class DungeonGenerator {
         if (p != null) map.firePotSpawns.add(p);
       }
     }
-    // Torches use torch_wall art (bright brick face) → south walls only
-    // (floor to the north / wall_bottom). Skip door cells.
+    // Wall torches: pack side matches wall tile (top/bottom/left/right).
     for (final info in infos) {
       final outer = info.outerBounds;
+      final top = outer.top;
       final bottom = outer.top + outer.height - 1;
-      final candidates = <Point<int>>[];
-      for (var x = outer.left + 1; x < outer.left + outer.width - 1; x++) {
-        if (map.tileAt(x, bottom) != TileType.wall) continue;
-        if (map.isDoorTile(x, bottom)) continue;
-        if (!map.isWalkable(x, bottom - 1)) continue;
-        candidates.add(Point(x, bottom));
+      final left = outer.left;
+      final right = outer.left + outer.width - 1;
+
+      final bySide = <WallSide, List<Point<int>>>{
+        WallSide.top: [],
+        WallSide.bottom: [],
+        WallSide.left: [],
+        WallSide.right: [],
+      };
+
+      for (var x = left + 1; x < right; x++) {
+        if (_canHostTorch(map, x, top, WallSide.top)) {
+          bySide[WallSide.top]!.add(Point(x, top));
+        }
+        if (_canHostTorch(map, x, bottom, WallSide.bottom)) {
+          bySide[WallSide.bottom]!.add(Point(x, bottom));
+        }
       }
-      if (candidates.isEmpty) continue;
-      candidates.shuffle(_rng);
-      final count = (1 + _rng.nextInt(2)).clamp(1, candidates.length);
-      map.torchSpawns.addAll(candidates.take(count));
+      for (var y = top + 1; y < bottom; y++) {
+        if (_canHostTorch(map, left, y, WallSide.left)) {
+          bySide[WallSide.left]!.add(Point(left, y));
+        }
+        if (_canHostTorch(map, right, y, WallSide.right)) {
+          bySide[WallSide.right]!.add(Point(right, y));
+        }
+      }
+
+      // Prefer a couple of sides so rooms feel lit without clutter.
+      final sides = bySide.entries.where((e) => e.value.isNotEmpty).toList()
+        ..shuffle(_rng);
+      for (final entry in sides.take(2)) {
+        final spots = entry.value..shuffle(_rng);
+        final count = (1 + _rng.nextInt(2)).clamp(1, spots.length);
+        for (final p in spots.take(count)) {
+          map.torchSpawns.add(TorchSpawn(pos: p, side: entry.key));
+        }
+      }
     }
+  }
+
+  bool _canHostTorch(DungeonMap map, int x, int y, WallSide side) {
+    if (map.tileAt(x, y) != TileType.wall) return false;
+    if (map.isDoorTile(x, y)) return false;
+    final d = side.floorDelta;
+    return map.isWalkable(x + d.x, y + d.y);
   }
 
   Point<int> _center(Rectangle<int> r) =>

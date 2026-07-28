@@ -31,8 +31,23 @@ class GameAssets {
     'outer_br': SpriteSheetSpec('tiles/wall_outer_br.png', 16, 16, 5),
   };
 
-  /// Animated torch baked into a south-facing wall tile.
-  static const torchWall = AnimSpec('tiles/torch_wall.png', 16, 16, 4, 0.15);
+  /// Animated wall torches — pack sides match wall tiles (top/bottom/left/right).
+  static const torchWallTop =
+      AnimSpec('tiles/torch_wall_top.png', 16, 16, 4, 0.15);
+  static const torchWallBottom =
+      AnimSpec('tiles/torch_wall_bottom.png', 16, 16, 4, 0.15);
+  static const torchWallLeft =
+      AnimSpec('tiles/torch_wall_left.png', 16, 16, 4, 0.15);
+  static const torchWallRight =
+      AnimSpec('tiles/torch_wall_right.png', 16, 16, 4, 0.15);
+
+  static AnimSpec torchWallFor(String side) => switch (side) {
+        'top' => torchWallTop,
+        'bottom' => torchWallBottom,
+        'left' => torchWallLeft,
+        'right' => torchWallRight,
+        _ => torchWallBottom,
+      };
 
   // ---------------------------------------------------------- objects
   static const chest = SpriteSheetSpec('objects/chest.png', 16, 16, 2);
@@ -122,6 +137,10 @@ class GameAssets {
         'tiles/floor.png',
         'tiles/stairs.png',
         ...wallTiles.values.map((s) => s.path),
+        'tiles/torch_wall_top.png',
+        'tiles/torch_wall_bottom.png',
+        'tiles/torch_wall_left.png',
+        'tiles/torch_wall_right.png',
         'tiles/torch_wall.png',
         'objects/chest.png',
         'objects/potion_red.png',

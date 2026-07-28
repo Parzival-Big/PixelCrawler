@@ -269,9 +269,10 @@ class StairsTrigger extends PositionComponent
   }
 }
 
-/// Animated torch overlay on a south wall (`wall_bottom` / torch_wall art).
+/// Animated torch overlay on a wall tile. Sprite strip matches [side]
+/// (`top`/`bottom`/`left`/`right`) from the asset pack.
 class Torch extends SpriteAnimationComponent {
-  Torch({required Vector2 position})
+  Torch({required Vector2 position, required this.side})
       : super(
           position: position,
           size: Vector2.all(16),
@@ -280,9 +281,11 @@ class Torch extends SpriteAnimationComponent {
           priority: -9990,
         );
 
+  final WallSide side;
+
   @override
   Future<void> onLoad() async {
-    animation = GameAssets.torchWall.animation();
+    animation = GameAssets.torchWallFor(side.assetKey).animation();
     animationTicker?.clock = Random().nextDouble();
   }
 }
