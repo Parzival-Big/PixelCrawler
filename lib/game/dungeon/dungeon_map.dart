@@ -6,6 +6,24 @@ enum RoomKind { start, combat, treasure, shop, boss }
 
 enum DoorDir { north, south, east, west }
 
+/// Pack wall side for directional tiles / torches (`top` = north wall, etc.).
+enum WallSide {
+  top,
+  bottom,
+  left,
+  right;
+
+  /// Floor neighbour that faces into the room for this wall side.
+  Point<int> get floorDelta => switch (this) {
+        WallSide.top => const Point(0, 1),
+        WallSide.bottom => const Point(0, -1),
+        WallSide.left => const Point(1, 0),
+        WallSide.right => const Point(-1, 0),
+      };
+
+  String get assetKey => name;
+}
+
 /// A door opening between two rooms.
 class DoorSpawn {
   DoorSpawn({
@@ -23,6 +41,14 @@ class DoorSpawn {
 
   /// Visual boss door (entrance to boss room).
   final bool bossDoor;
+}
+
+/// Wall-mounted torch spawn (sprite strip chosen by [side]).
+class TorchSpawn {
+  TorchSpawn({required this.pos, required this.side});
+
+  final Point<int> pos;
+  final WallSide side;
 }
 
 /// Shop pedestal placed in a shop room.
@@ -85,8 +111,8 @@ class DungeonMap {
   Point<int>? bossSpawn;
   bool hasShopRoom = false;
 
-  /// Wall tiles whose south neighbour is floor: they can host a torch.
-  final torchSpawns = <Point<int>>[];
+  /// Wall torches: position + pack side (`top`/`bottom`/`left`/`right`).
+  final torchSpawns = <TorchSpawn>[];
 
   /// Decorative props (index into GameAssets.decor) and fire pots.
   final decorSpawns = <(Point<int>, int)>[];

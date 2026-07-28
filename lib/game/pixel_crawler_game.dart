@@ -277,11 +277,17 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     for (final t in map.torchSpawns) {
-      final px = t.x * tileSize;
-      final py = t.y * tileSize;
-      world.add(Torch(position: Vector2(px, py)));
-      // Glow spills into the room (north of the south-wall torch).
-      world.add(GlowComponent(center: Vector2(px + 8, py - 2), radius: 28));
+      final px = t.pos.x * tileSize;
+      final py = t.pos.y * tileSize;
+      world.add(Torch(position: Vector2(px, py), side: t.side));
+      // Glow spills into the room from the lit wall face.
+      final d = t.side.floorDelta;
+      world.add(
+        GlowComponent(
+          center: Vector2(px + 8 + d.x * 6, py + 8 + d.y * 6),
+          radius: 28,
+        ),
+      );
     }
 
     for (final (p, kind) in map.decorSpawns) {
