@@ -38,7 +38,7 @@ La visuale è top-down con profondità simulata:
 - i muri hanno una **faccia frontale** in mattoni e una **cima** scura;
 - tutte le entità sono **ordinate sull'asse Y** (chi è più in basso viene disegnato davanti);
 - ombre ellittiche sotto i personaggi e bande di occlusione ambientale sotto i muri;
-- torce animate con **bagliore additivo**.
+- torce animate.
 
 ## Asset
 

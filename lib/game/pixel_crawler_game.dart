@@ -353,16 +353,6 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
         tileX: t.pos.x,
         tileY: t.pos.y,
       ));
-      // Glow spills into the room from the lit wall face.
-      final d = t.side.floorDelta;
-      world.add(
-        GlowComponent(
-          center: Vector2(px + 8 + d.x * 6, py + 8 + d.y * 6),
-          radius: 28,
-          tileX: t.pos.x,
-          tileY: t.pos.y,
-        ),
-      );
     }
 
     for (final (p, kind) in map.decorSpawns) {
@@ -376,12 +366,6 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     for (final p in map.firePotSpawns) {
       final pos = _tileBottom(p.x, p.y);
       world.add(FirePot(position: pos));
-      world.add(GlowComponent(
-        center: pos - Vector2(0, 6),
-        radius: 30,
-        tileX: p.x,
-        tileY: p.y,
-      ));
     }
 
     for (final d in map.doorSpawns) {

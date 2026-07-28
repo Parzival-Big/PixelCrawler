@@ -11,9 +11,12 @@ import 'monster.dart';
 class Player extends GameCharacter {
   Player({required this.def, required super.position})
       : super(
-          frameSize: def.anim.size,
+          frameSize: def.anim.size * visualScale,
           maxHp: def.maxHp + SessionBonus.extraHp,
         );
+
+  /// Visual (and feet) size relative to the raw sprite frame.
+  static const visualScale = 0.8;
 
   final HeroDef def;
   final _rng = Random();
@@ -23,6 +26,12 @@ class Player extends GameCharacter {
   double _invulnTimer = 0;
 
   static const aimRange = 130.0;
+
+  @override
+  double get feetWidth => 9 * visualScale;
+
+  @override
+  double get feetHeight => 5 * visualScale;
 
   double get moveSpeed => def.speed + SessionBonus.extraSpeed;
 
