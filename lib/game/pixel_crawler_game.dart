@@ -209,10 +209,15 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       if (map.isDoorTile(gx, gy)) continue;
       final info = map.roomInfoContaining(gx, gy);
       if (info?.gridKey != room.gridKey) continue;
-      p.position = Vector2(
+      final feet = Vector2(
         gx * tileSize + tileSize / 2,
         gy * tileSize + tileSize - 2,
       );
+      // Never land on a barrel/crate/chest that would soft-lock the hero.
+      if (solidBlocksFeet(feet.x, feet.y, p.feetWidth, p.feetHeight)) {
+        continue;
+      }
+      p.position = feet;
       return;
     }
   }

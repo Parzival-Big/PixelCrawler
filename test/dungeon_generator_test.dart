@@ -33,6 +33,27 @@ void main() {
           expect(map.rooms.length, greaterThanOrEqualTo(2));
           expect(map.isWalkable(map.playerSpawn.x, map.playerSpawn.y), isTrue,
               reason: 'player spawn must be walkable');
+          // Spawn tile and its Moore neighborhood must be free of solid props.
+          for (var dy = -1; dy <= 1; dy++) {
+            for (var dx = -1; dx <= 1; dx++) {
+              final p = Point(map.playerSpawn.x + dx, map.playerSpawn.y + dy);
+              expect(
+                map.decorSpawns.any((e) => e.$1 == p),
+                isFalse,
+                reason: 'solid decor at $p blocks hero spawn',
+              );
+              expect(
+                map.firePotSpawns.contains(p),
+                isFalse,
+                reason: 'fire pot at $p blocks hero spawn',
+              );
+              expect(
+                map.chestSpawns.contains(p),
+                isFalse,
+                reason: 'chest at $p blocks hero spawn',
+              );
+            }
+          }
           expect(map.tileAt(map.stairsPos.x, map.stairsPos.y), TileType.stairs);
           expect(reachable(map, map.playerSpawn, map.stairsPos), isTrue,
               reason: 'stairs must be reachable from spawn');

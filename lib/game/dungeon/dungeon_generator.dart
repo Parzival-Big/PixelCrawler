@@ -200,6 +200,18 @@ class DungeonGenerator {
   /// Keep a short walkable path from each wall midpoint toward the center
   /// so layouts with pits never seal doorways.
   void _clearDoorApproaches(DungeonMap map, Rectangle<int> room) {
+    final cleared = _doorApproachTiles(room);
+    for (final p in cleared) {
+      if (map.tileAt(p.x, p.y) == TileType.pit || map.isTrap(p.x, p.y)) {
+        map.setTile(p.x, p.y, TileType.floor);
+      }
+    }
+    // Solid props must not sit on door pads — that's where the hero lands.
+    _removeSolidPropsAt(map, cleared);
+  }
+
+  /// First few tiles inward from each mid-wall door slot.
+  Set<Point<int>> _doorApproachTiles(Rectangle<int> room) {
     final cx = room.left + room.width ~/ 2;
     final cy = room.top + room.height ~/ 2;
     final entries = [
@@ -208,17 +220,26 @@ class DungeonGenerator {
       Point(room.left, cy),
       Point(room.left + room.width - 1, cy),
     ];
+    final tiles = <Point<int>>{};
     for (final e in entries) {
       var x = e.x;
       var y = e.y;
       for (var step = 0; step < 3; step++) {
-        if (map.tileAt(x, y) == TileType.pit || map.isTrap(x, y)) {
-          map.setTile(x, y, TileType.floor);
-        }
+        tiles.add(Point(x, y));
         x += (cx - e.x).sign;
         y += (cy - e.y).sign;
       }
     }
+    return tiles;
+  }
+
+  /// Drops barrels/crates/fire pots/chests from [tiles] so the hero can stand.
+  void _removeSolidPropsAt(DungeonMap map, Iterable<Point<int>> tiles) {
+    final ban = tiles.toSet();
+    if (ban.isEmpty) return;
+    map.decorSpawns.removeWhere((e) => ban.contains(e.$1));
+    map.firePotSpawns.removeWhere(ban.contains);
+    map.chestSpawns.removeWhere(ban.contains);
   }
 
   /// BoI-style cohesion: clear L-paths between door midpoints so every
@@ -327,6 +348,20 @@ class DungeonGenerator {
     final boss = infos.firstWhere((r) => r.kind == RoomKind.boss);
     map.playerSpawn = _center(start.bounds);
 
+    // Keep the floor-start landing clear of pits, traps and solid props.
+    final spawnClear = <Point<int>>{};
+    for (var dy = -1; dy <= 1; dy++) {
+      for (var dx = -1; dx <= 1; dx++) {
+        spawnClear.add(Point(map.playerSpawn.x + dx, map.playerSpawn.y + dy));
+      }
+    }
+    for (final p in spawnClear) {
+      if (map.tileAt(p.x, p.y) == TileType.pit || map.isTrap(p.x, p.y)) {
+        map.setTile(p.x, p.y, TileType.floor);
+      }
+    }
+    _removeSolidPropsAt(map, spawnClear);
+
     // Boss stays in the boss room; stairs live in a different room so the
     // exit is not stacked on the fight.
     map.bossSpawn = _center(boss.bounds);
@@ -357,6 +392,11 @@ class DungeonGenerator {
     }
 
     final used = <Point<int>>{map.playerSpawn, map.stairsPos, map.bossSpawn!};
+    used.addAll(spawnClear);
+    // Keep door pads free for room-entry landings (chests/monsters later).
+    for (final room in map.rooms) {
+      used.addAll(_doorApproachTiles(room));
+    }
     // Reserve solid decor so monsters never spawn trapped on barrels/crates.
     for (final (p, _) in map.decorSpawns) {
       used.add(p);

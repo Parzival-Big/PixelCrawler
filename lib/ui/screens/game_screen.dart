@@ -103,64 +103,80 @@ class _HudOverlay extends StatelessWidget {
                 const SizedBox(height: 6),
                 _HeartsRow(game: game),
                 const SizedBox(height: 6),
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/images/objects/coin.png',
-                      width: 18,
-                      height: 18,
-                      filterQuality: FilterQuality.none,
-                    ),
-                    const SizedBox(width: 4),
-                    ValueListenableBuilder<int>(
-                      valueListenable: game.coinsNotifier,
-                      builder: (_, coins, _) => Text(
-                        '$coins',
-                        style: const TextStyle(
-                          fontFamily: pixelFont,
-                          fontSize: 10,
-                          color: PixelColors.gold,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/images/objects/coin.png',
+                          width: 18,
+                          height: 18,
+                          filterQuality: FilterQuality.none,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Image.asset(
-                      'assets/images/objects/key.png',
-                      width: 18,
-                      height: 18,
-                      filterQuality: FilterQuality.none,
-                    ),
-                    const SizedBox(width: 4),
-                    ValueListenableBuilder<int>(
-                      valueListenable: game.keysNotifier,
-                      builder: (_, keys, _) => Text(
-                        '$keys',
-                        style: const TextStyle(
-                          fontFamily: pixelFont,
-                          fontSize: 10,
-                          color: PixelColors.textDim,
+                        const SizedBox(width: 4),
+                        ValueListenableBuilder<int>(
+                          valueListenable: game.coinsNotifier,
+                          builder: (_, coins, _) => Text(
+                            '$coins',
+                            style: const TextStyle(
+                              fontFamily: pixelFont,
+                              fontSize: 10,
+                              color: PixelColors.gold,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Image.asset(
-                      'assets/images/objects/key_boss.png',
-                      width: 18,
-                      height: 18,
-                      filterQuality: FilterQuality.none,
-                    ),
-                    const SizedBox(width: 4),
-                    ValueListenableBuilder<int>(
-                      valueListenable: game.bossKeysNotifier,
-                      builder: (_, keys, _) => Text(
-                        '$keys',
-                        style: const TextStyle(
-                          fontFamily: pixelFont,
-                          fontSize: 10,
-                          color: PixelColors.gold,
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/images/objects/key.png',
+                          width: 18,
+                          height: 18,
+                          filterQuality: FilterQuality.none,
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        ValueListenableBuilder<int>(
+                          valueListenable: game.keysNotifier,
+                          builder: (_, keys, _) => Text(
+                            '$keys',
+                            style: const TextStyle(
+                              fontFamily: pixelFont,
+                              fontSize: 10,
+                              color: PixelColors.textDim,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/images/objects/key_boss.png',
+                          width: 18,
+                          height: 18,
+                          filterQuality: FilterQuality.none,
+                        ),
+                        const SizedBox(width: 4),
+                        ValueListenableBuilder<int>(
+                          valueListenable: game.bossKeysNotifier,
+                          builder: (_, keys, _) => Text(
+                            '$keys',
+                            style: const TextStyle(
+                              fontFamily: pixelFont,
+                              fontSize: 10,
+                              color: PixelColors.gold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

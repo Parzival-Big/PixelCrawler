@@ -64,7 +64,7 @@ class CoinPickup extends Pickup {
     this.autoCollect = false,
   });
 
-  /// Monster drops fly to the player (also recovers coins that land in pits).
+  /// Magnet to the player (monster / chest drops; recovers coins in pits).
   final bool autoCollect;
   static const _magnetSpeed = 110.0;
 
@@ -238,6 +238,7 @@ class Chest extends SpriteComponent
         final side = (_rng.nextDouble() - 0.5) * 14;
         game.world.add(CoinPickup(
           position: toss(10 + _rng.nextDouble() * 10, side),
+          autoCollect: true,
         ));
       }
       // No blue (max-HP) potions from chests — only healing reds.
