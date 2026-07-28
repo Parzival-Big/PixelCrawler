@@ -65,8 +65,9 @@ abstract class GameCharacter extends SpriteAnimationComponent
   }
 
   void faceDirection(double dx) {
-    if (dx > 0 && scale.x < 0) scale.x = 1;
-    if (dx < 0 && scale.x > 0) scale.x = -1;
+    if (dx == 0) return;
+    // Pack sprites face left by default: flip when moving right.
+    scale.x = dx < 0 ? 1.0 : -1.0;
   }
 
   /// Returns true if the hit killed the character.
