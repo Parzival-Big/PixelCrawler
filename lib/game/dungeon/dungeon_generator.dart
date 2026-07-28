@@ -326,21 +326,43 @@ class DungeonGenerator {
     final boss = infos.firstWhere((r) => r.kind == RoomKind.boss);
     map.playerSpawn = _center(start.bounds);
 
-    // Stairs + boss in boss room.
-    map.stairsPos = _center(boss.bounds);
-    map.setTile(map.stairsPos.x, map.stairsPos.y, TileType.stairs);
-    map.bossSpawn = Point(map.stairsPos.x, map.stairsPos.y - 2);
+    // Boss stays in the boss room; stairs live in a different room so the
+    // exit is not stacked on the fight.
+    map.bossSpawn = _center(boss.bounds);
     if (!map.isWalkable(map.bossSpawn!.x, map.bossSpawn!.y)) {
-      map.bossSpawn = Point(map.stairsPos.x, map.stairsPos.y + 2);
+      map.bossSpawn = Point(map.bossSpawn!.x, map.bossSpawn!.y + 1);
     }
-    // Clear pits under boss/stairs.
+    final stairRoomCandidates = infos
+        .where((r) =>
+            r.kind != RoomKind.boss &&
+            r.kind != RoomKind.start &&
+            r.kind != RoomKind.shop)
+        .toList();
+    final stairRoom = stairRoomCandidates.isNotEmpty
+        ? stairRoomCandidates[_rng.nextInt(stairRoomCandidates.length)]
+        : start;
+    map.stairsPos = _center(stairRoom.bounds);
+    map.setTile(map.stairsPos.x, map.stairsPos.y, TileType.stairs);
+
+    // Clear pits/traps under boss/stairs.
     for (final p in [map.stairsPos, map.bossSpawn!]) {
       if (map.tileAt(p.x, p.y) == TileType.pit || map.isTrap(p.x, p.y)) {
-        map.setTile(p.x, p.y, p == map.stairsPos ? TileType.stairs : TileType.floor);
+        map.setTile(
+          p.x,
+          p.y,
+          p == map.stairsPos ? TileType.stairs : TileType.floor,
+        );
       }
     }
 
     final used = <Point<int>>{map.playerSpawn, map.stairsPos, map.bossSpawn!};
+    // Reserve solid decor so monsters never spawn trapped on barrels/crates.
+    for (final (p, _) in map.decorSpawns) {
+      used.add(p);
+    }
+    for (final p in map.firePotSpawns) {
+      used.add(p);
+    }
 
     Point<int>? randomSpotIn(Rectangle<int> room, {int margin = 1}) {
       for (var i = 0; i < 30; i++) {

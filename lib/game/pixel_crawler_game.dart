@@ -543,7 +543,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (overlays.registeredOverlays.contains(Overlays.floorTransition)) {
       overlays.add(Overlays.floorTransition);
-      await Future<void>.delayed(const Duration(milliseconds: 280));
+      await Future<void>.delayed(const Duration(milliseconds: 720));
     }
 
     await _loadFloor();
@@ -560,7 +560,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     }
     if (overlays.registeredOverlays.contains(Overlays.floorTransition)) {
       overlays.add(Overlays.floorTransition);
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     }
     await _loadFloor();
     if (overlays.isActive(Overlays.floorTransition)) {

@@ -36,25 +36,34 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GameWidget<PixelCrawlerGame>(
-        game: _game,
-        initialActiveOverlays: const [Overlays.hud],
-        overlayBuilderMap: {
-          Overlays.hud: (context, game) => _Hud(game: game),
-          Overlays.pause: (context, game) => _PauseOverlay(
-                game: game,
-                onQuit: _quitToMenu,
+      backgroundColor: PixelColors.bg,
+      body: AdaptiveSafeArea(
+        child: Column(
+          children: [
+            // HUD lives outside the room canvas so it never fights door lintels.
+            _HudBar(game: _game),
+            Expanded(
+              child: GameWidget<PixelCrawlerGame>(
+                game: _game,
+                overlayBuilderMap: {
+                  Overlays.pause: (context, game) => _PauseOverlay(
+                        game: game,
+                        onQuit: _quitToMenu,
+                      ),
+                  Overlays.gameOver: (context, game) => _GameOverOverlay(
+                        game: game,
+                        onRetry: _retry,
+                        onQuit: _quitToMenu,
+                      ),
+                  Overlays.unlock: (context, game) => _UnlockToast(game: game),
+                  Overlays.shop: (context, game) => ShopOverlay(game: game),
+                  Overlays.floorTransition: (context, game) =>
+                      _FloorTransitionOverlay(game: game),
+                },
               ),
-          Overlays.gameOver: (context, game) => _GameOverOverlay(
-                game: game,
-                onRetry: _retry,
-                onQuit: _quitToMenu,
-              ),
-          Overlays.unlock: (context, game) => _UnlockToast(game: game),
-          Overlays.shop: (context, game) => ShopOverlay(game: game),
-          Overlays.floorTransition: (context, game) =>
-              const _FloorTransitionOverlay(),
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -66,124 +75,118 @@ class _GameScreenState extends State<GameScreen> {
 
 // ------------------------------------------------------------------- HUD
 
-class _Hud extends StatelessWidget {
-  const _Hud({required this.game});
+class _HudBar extends StatelessWidget {
+  const _HudBar({required this.game});
 
   final PixelCrawlerGame game;
 
   @override
   Widget build(BuildContext context) {
-    return AdaptiveSafeArea(
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _HeartsRow(game: game),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/objects/coin.png',
-                      width: 18,
-                      height: 18,
-                      filterQuality: FilterQuality.none,
-                    ),
-                    const SizedBox(width: 4),
-                    ValueListenableBuilder<int>(
-                      valueListenable: game.coinsNotifier,
-                      builder: (_, coins, _) => Text(
-                        '$coins',
-                        style: const TextStyle(
-                          fontFamily: pixelFont,
-                          fontSize: 10,
-                          color: PixelColors.gold,
+    return Material(
+      color: PixelColors.bg,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _HeartsRow(game: game),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Image.asset(
+                        'assets/images/objects/coin.png',
+                        width: 18,
+                        height: 18,
+                        filterQuality: FilterQuality.none,
+                      ),
+                      const SizedBox(width: 4),
+                      ValueListenableBuilder<int>(
+                        valueListenable: game.coinsNotifier,
+                        builder: (_, coins, _) => Text(
+                          '$coins',
+                          style: const TextStyle(
+                            fontFamily: pixelFont,
+                            fontSize: 10,
+                            color: PixelColors.gold,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Image.asset(
-                      'assets/images/objects/key.png',
-                      width: 18,
-                      height: 18,
-                      filterQuality: FilterQuality.none,
-                    ),
-                    const SizedBox(width: 4),
-                    ValueListenableBuilder<int>(
-                      valueListenable: game.keysNotifier,
-                      builder: (_, keys, _) => Text(
-                        '$keys',
-                        style: const TextStyle(
-                          fontFamily: pixelFont,
-                          fontSize: 10,
-                          color: PixelColors.textDim,
+                      const SizedBox(width: 12),
+                      Image.asset(
+                        'assets/images/objects/key.png',
+                        width: 18,
+                        height: 18,
+                        filterQuality: FilterQuality.none,
+                      ),
+                      const SizedBox(width: 4),
+                      ValueListenableBuilder<int>(
+                        valueListenable: game.keysNotifier,
+                        builder: (_, keys, _) => Text(
+                          '$keys',
+                          style: const TextStyle(
+                            fontFamily: pixelFont,
+                            fontSize: 10,
+                            color: PixelColors.textDim,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Image.asset(
-                      'assets/images/objects/key_boss.png',
-                      width: 18,
-                      height: 18,
-                      filterQuality: FilterQuality.none,
-                    ),
-                    const SizedBox(width: 4),
-                    ValueListenableBuilder<int>(
-                      valueListenable: game.bossKeysNotifier,
-                      builder: (_, keys, _) => Text(
-                        '$keys',
-                        style: const TextStyle(
-                          fontFamily: pixelFont,
-                          fontSize: 10,
-                          color: PixelColors.gold,
+                      const SizedBox(width: 10),
+                      Image.asset(
+                        'assets/images/objects/key_boss.png',
+                        width: 18,
+                        height: 18,
+                        filterQuality: FilterQuality.none,
+                      ),
+                      const SizedBox(width: 4),
+                      ValueListenableBuilder<int>(
+                        valueListenable: game.bossKeysNotifier,
+                        builder: (_, keys, _) => Text(
+                          '$keys',
+                          style: const TextStyle(
+                            fontFamily: pixelFont,
+                            fontSize: 10,
+                            color: PixelColors.gold,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: ValueListenableBuilder<int>(
-                valueListenable: game.floorNotifier,
-                builder: (_, floor, _) => Text(
+            ValueListenableBuilder<int>(
+              valueListenable: game.floorNotifier,
+              builder: (_, floor, _) => Padding(
+                padding: const EdgeInsets.only(top: 4, right: 10),
+                child: Text(
                   'PIANO $floor',
                   style: const TextStyle(
                     fontFamily: pixelFont,
-                    fontSize: 10,
-                    color: PixelColors.textDim,
+                    fontSize: 12,
+                    color: PixelColors.gold,
                   ),
                 ),
               ),
             ),
-          ),
-          Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 44, right: 10),
-              child: MiniMapOverlay(game: game),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                PixelButton(
+                  label: 'II',
+                  fontSize: 9,
+                  onPressed: game.togglePause,
+                ),
+                const SizedBox(height: 10),
+                MiniMapOverlay(game: game),
+              ],
             ),
-          ),
-          Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: PixelButton(
-                label: 'II',
-                fontSize: 9,
-                onPressed: game.togglePause,
-              ),
-            ),
-          ),
-          _FloorBanner(game: game),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -222,66 +225,6 @@ class _HeartsRow extends StatelessWidget {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-/// Big "PIANO N" splash shown for a moment when entering a new floor.
-class _FloorBanner extends StatefulWidget {
-  const _FloorBanner({required this.game});
-
-  final PixelCrawlerGame game;
-
-  @override
-  State<_FloorBanner> createState() => _FloorBannerState();
-}
-
-class _FloorBannerState extends State<_FloorBanner> {
-  bool _visible = true;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.game.floorNotifier.addListener(_show);
-    _show();
-  }
-
-  void _show() {
-    _timer?.cancel();
-    setState(() => _visible = true);
-    _timer = Timer(const Duration(milliseconds: 1400), () {
-      if (mounted) setState(() => _visible = false);
-    });
-  }
-
-  @override
-  void dispose() {
-    widget.game.floorNotifier.removeListener(_show);
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: AnimatedOpacity(
-        opacity: _visible ? 1 : 0,
-        duration: const Duration(milliseconds: 400),
-        child: Center(
-          child: Text(
-            'PIANO ${widget.game.floorNotifier.value}',
-            style: const TextStyle(
-              fontFamily: pixelFont,
-              fontSize: 26,
-              color: PixelColors.text,
-              shadows: [
-                Shadow(color: Color(0xFF000000), offset: Offset(3, 3)),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -408,8 +351,11 @@ class _UnlockToastState extends State<_UnlockToast> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
-      widget.game.overlays.remove(Overlays.unlock);
+    Future<void>.delayed(const Duration(seconds: 3), () {
+      if (mounted &&
+          widget.game.overlays.isActive(Overlays.unlock)) {
+        widget.game.overlays.remove(Overlays.unlock);
+      }
     });
   }
 
@@ -418,25 +364,19 @@ class _UnlockToastState extends State<_UnlockToast> {
     final names = widget.game.lastUnlocked
         .map((h) => heroes[h]!.name.toUpperCase())
         .join(', ');
-    return AdaptiveSafeArea(
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: PixelPanel(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            color: PixelColors.surfaceLight,
-            child: Text(
-              names.isEmpty
-                  ? 'NUOVO EROE SBLOCCATO!'
-                  : 'NUOVO EROE SBLOCCATO: $names!',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: pixelFont,
-                fontSize: 9,
-                color: PixelColors.gold,
-              ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: PixelPanel(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Text(
+            'SBLOCCATO: $names',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: pixelFont,
+              fontSize: 8,
+              color: PixelColors.gold,
             ),
           ),
         ),
@@ -448,18 +388,36 @@ class _UnlockToastState extends State<_UnlockToast> {
 // ------------------------------------------------------ floor transition
 
 class _FloorTransitionOverlay extends StatelessWidget {
-  const _FloorTransitionOverlay();
+  const _FloorTransitionOverlay({required this.game});
+
+  final PixelCrawlerGame game;
 
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 280),
+        duration: const Duration(milliseconds: 720),
         builder: (context, t, _) {
+          final opacity = (0.55 + 0.45 * t).clamp(0.0, 1.0);
           return ColoredBox(
-            color: Color.fromRGBO(14, 34, 43, t.clamp(0.0, 1.0)),
-            child: const SizedBox.expand(),
+            color: Color.fromRGBO(14, 34, 43, opacity),
+            child: Center(
+              child: Opacity(
+                opacity: t.clamp(0.0, 1.0),
+                child: Text(
+                  'PIANO ${game.floor}',
+                  style: const TextStyle(
+                    fontFamily: pixelFont,
+                    fontSize: 28,
+                    color: PixelColors.gold,
+                    shadows: [
+                      Shadow(color: Color(0xFF000000), offset: Offset(3, 3)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           );
         },
       ),

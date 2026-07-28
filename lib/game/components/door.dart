@@ -10,9 +10,9 @@ import 'solid_obstacle.dart';
 
 /// Door between rooms.
 ///
-/// Facing follows the wall of the *current* room (shared wall tiles flip
-/// when you enter the neighbour). North doors draw above the hero so it
-/// looks like they walk under the lintel / portcullis.
+/// Facing follows the wall of the *current* room. When open, the dark
+/// opening draws *behind* the hero and the lintel / bars draw *in front*
+/// so the hero appears to walk under the frame.
 class Door extends SpriteComponent
     with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   Door({required this.spawn})
@@ -23,38 +23,49 @@ class Door extends SpriteComponent
           ),
           size: Vector2.all(tileSize),
           anchor: Anchor.topLeft,
+          priority: behindPriority,
         );
 
   final DoorSpawn spawn;
   bool open = false;
   DoorDir _displayDir = DoorDir.north;
+  DoorLintel? _lintel;
 
-  /// Above any y-sorted character so north lintels cover the hero.
+  /// Lintel / frame above y-sorted characters.
   static const underpassPriority = 100000;
 
-  /// Just above the baked dungeon, behind characters.
+  /// Opening / threshold behind characters.
   static const behindPriority = -9995;
+
+  /// How many pixels from the top of the tile are the overhanging frame.
+  double get lintelHeight {
+    switch (_displayDir) {
+      case DoorDir.north:
+        return 8;
+      case DoorDir.south:
+        return 7;
+      case DoorDir.east:
+      case DoorDir.west:
+        return 6;
+    }
+  }
 
   @override
   double get solidWidth => open ? 0 : tileSize;
   @override
   double get solidHeight => open ? 0 : tileSize;
 
-  /// Door uses top-left anchoring (wall tile space), not bottom-center.
   @override
   Rect get solidRect {
     if (open) return Rect.zero;
     return Rect.fromLTWH(position.x, position.y, tileSize, tileSize);
   }
 
-  /// Which way this doorway faces from the room the player is in.
   DoorDir facingForRoom(RoomInfo? room) {
     if (room == null) return spawn.dir;
-    final edge = _edgeOnRoom(room);
-    return edge ?? spawn.dir;
+    return _edgeOnRoom(room) ?? spawn.dir;
   }
 
-  /// True when this tile sits on [room]'s outer wall ring.
   bool isOnPerimeterOf(RoomInfo? room) {
     if (room == null) return false;
     return _edgeOnRoom(room) != null;
@@ -81,7 +92,16 @@ class Door extends SpriteComponent
     open = !spawn.locked;
     _displayDir = spawn.dir;
     opacity = 0;
+    _lintel = DoorLintel(door: this);
+    await game.world.add(_lintel!);
     _applyVisuals();
+  }
+
+  @override
+  void onRemove() {
+    _lintel?.removeFromParent();
+    _lintel = null;
+    super.onRemove();
   }
 
   SpriteSpec _specFor({required bool opened, required DoorDir dir}) {
@@ -119,16 +139,24 @@ class Door extends SpriteComponent
 
   void _applyVisuals() {
     sprite = _specFor(opened: open, dir: _displayDir).sprite();
-    // North wall doors sit in front of the hero (walk-under lintel).
-    // Other sides stay behind so the hero walks in front of the frame.
-    priority =
-        _displayDir == DoorDir.north ? underpassPriority : behindPriority;
+    // Closed doors sit fully in front; open doors split opening/lintel.
+    priority = open ? behindPriority : underpassPriority;
+    _lintel?.sync();
   }
 
   @override
   void render(Canvas canvas) {
-    if (opacity <= 0) return;
+    if (opacity <= 0 || sprite == null) return;
+    if (!open) {
+      super.render(canvas);
+      return;
+    }
+    // Only the dark opening / threshold (below the lintel).
+    final h = lintelHeight;
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, h, size.x, size.y - h));
     super.render(canvas);
+    canvas.restore();
   }
 
   @override
@@ -138,6 +166,7 @@ class Door extends SpriteComponent
     final room = game.currentRoom;
     final onPerimeter = isOnPerimeterOf(room);
     opacity = onPerimeter ? 1 : 0;
+    _lintel?.sync();
     if (!onPerimeter) return;
 
     final facing = facingForRoom(room);
@@ -165,5 +194,34 @@ class Door extends SpriteComponent
       open = true;
       _applyVisuals();
     }
+  }
+}
+
+/// Top strip of an open door drawn above the hero.
+class DoorLintel extends PositionComponent
+    with HasGameReference<PixelCrawlerGame> {
+  DoorLintel({required this.door})
+      : super(
+          position: door.position.clone(),
+          size: Vector2.all(tileSize),
+          anchor: Anchor.topLeft,
+          priority: Door.underpassPriority,
+        );
+
+  final Door door;
+
+  void sync() {
+    position.setFrom(door.position);
+    priority = Door.underpassPriority;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (door.opacity <= 0 || !door.open || door.sprite == null) return;
+    final h = door.lintelHeight;
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.x, h));
+    door.sprite!.render(canvas, size: size);
+    canvas.restore();
   }
 }

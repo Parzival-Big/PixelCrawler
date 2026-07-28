@@ -178,6 +178,7 @@ class Monster extends GameCharacter {
       game.world.add(CoinPickup(
         position: position +
             Vector2((_rng.nextDouble() - 0.5) * 10, (_rng.nextDouble() - 0.5) * 8),
+        autoCollect: true,
       ));
     }
     if (isBoss || def.type == MonsterType.boss) {

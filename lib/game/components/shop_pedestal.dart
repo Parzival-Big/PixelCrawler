@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
+import 'package:flutter/painting.dart';
 
 import '../../config/game_assets.dart';
 import '../dungeon/dungeon_map.dart';
@@ -73,13 +74,22 @@ class ShopPedestal extends PositionComponent
 
     if (!_bought) {
       _icon.render(canvas, position: Vector2(0, 0), size: Vector2.all(16));
-      // Price as tiny bars: each 10 coins ≈ one pip (visual hint) + digit via
-      // overlapping coin sprite scaled down would be heavy — draw cost pips.
-      final pip = ui.Paint()..color = const ui.Color(0xFFB9DDA7);
-      final n = (spawn.cost / 10).round().clamp(3, 5);
-      for (var i = 0; i < n; i++) {
-        canvas.drawRect(ui.Rect.fromLTWH(2.0 + i * 2.5, 24, 2, 2), pip);
-      }
+      final label = TextPainter(
+        text: TextSpan(
+          text: '${spawn.cost}',
+          style: const TextStyle(
+            fontFamily: 'PressStart2P',
+            fontSize: 6,
+            color: ui.Color(0xFFB9DDA7),
+            height: 1,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      label.paint(
+        canvas,
+        ui.Offset((size.x - label.width) / 2, 22),
+      );
     }
   }
 }

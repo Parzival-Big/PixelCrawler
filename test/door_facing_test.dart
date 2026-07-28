@@ -57,14 +57,30 @@ void main() {
     }
   });
 
+  test('stairs are not forced into the boss room', () {
+    for (var seed = 0; seed < 8; seed++) {
+      final map = DungeonGenerator(floor: 2, seed: seed).generate();
+      final boss = map.roomInfos.firstWhere((r) => r.kind == RoomKind.boss);
+      final stairRoom = map.roomInfoContaining(map.stairsPos.x, map.stairsPos.y);
+      expect(stairRoom, isNotNull);
+      expect(
+        stairRoom!.kind,
+        isNot(RoomKind.boss),
+        reason: 'seed $seed: stairs should leave the boss room',
+      );
+      expect(boss.bounds.containsPoint(map.bossSpawn!), isTrue);
+    }
+  });
+
   testWithGame<PixelCrawlerGame>(
-    'only current-room perimeter doors are visible; neighbours stay masked',
+    'only current-room perimeter doors are visible; open doors split layers',
     () => PixelCrawlerGame(heroType: HeroType.knight),
     (game) async {
       game.update(0);
       final room = game.currentRoom!;
       final doors = game.world.children.query<Door>().toList();
       expect(doors, isNotEmpty);
+      expect(game.world.children.query<DoorLintel>(), isNotEmpty);
 
       var visible = 0;
       for (final door in doors) {
@@ -72,11 +88,11 @@ void main() {
         if (door.isOnPerimeterOf(room)) {
           visible++;
           expect(door.opacity, 1);
-          final facing = door.facingForRoom(room);
-          if (facing == DoorDir.north) {
-            expect(door.priority, Door.underpassPriority);
-          } else {
+          // Open → opening behind hero; closed → full door in front.
+          if (door.open) {
             expect(door.priority, Door.behindPriority);
+          } else {
+            expect(door.priority, Door.underpassPriority);
           }
         } else {
           expect(door.opacity, 0);

@@ -74,28 +74,30 @@ class DungeonRenderer extends SpriteComponent {
   }
 
   /// Picks the wall tile orientation from the walkable neighbours.
+  ///
+  /// Pack names match room sides: `top` = north wall, `bottom` = south,
+  /// `left` = west, `right` = east.
   String? _wallTileName(int x, int y) {
     bool f(int dx, int dy) => map.isWalkable(x + dx, y + dy);
     final n = f(0, -1), s = f(0, 1), w = f(-1, 0), e = f(1, 0);
 
-    // Floor on two orthogonal sides: inner corner (the wall band bends
-    // around the floor).
-    if (s && e) return 'inner_br';
-    if (s && w) return 'inner_bl';
-    if (n && e) return 'inner_tr';
-    if (n && w) return 'inner_tl';
+    // Floor on two orthogonal sides: inner corner toward the floor.
+    if (s && e) return 'inner_tl';
+    if (s && w) return 'inner_tr';
+    if (n && e) return 'inner_bl';
+    if (n && w) return 'inner_br';
 
-    // Floor on one side: straight wall.
-    if (s) return 'bottom';
-    if (n) return 'top';
-    if (w) return 'left';
-    if (e) return 'right';
+    // Floor on one side → that side of the room.
+    if (s) return 'top';
+    if (n) return 'bottom';
+    if (e) return 'left';
+    if (w) return 'right';
 
     // Floor only diagonally: outer corner.
-    if (f(1, 1)) return 'outer_br';
-    if (f(-1, 1)) return 'outer_bl';
-    if (f(1, -1)) return 'outer_tr';
-    if (f(-1, -1)) return 'outer_tl';
+    if (f(1, 1)) return 'outer_tl';
+    if (f(-1, 1)) return 'outer_tr';
+    if (f(1, -1)) return 'outer_bl';
+    if (f(-1, -1)) return 'outer_br';
     return null;
   }
 }
