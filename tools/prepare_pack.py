@@ -116,7 +116,7 @@ def objects():
     save(raw("objects", "key_small.png"), "objects", "key.png")
     save(raw("objects", "key_boss.png"), "objects", "key_boss.png")
 
-    # Door faces: vertical (top) and horizontal (left) for each state.
+    # Door faces: one sprite per wall direction (pack has unique art per side).
     door_kinds = {
         "open": "door_stone_open",
         "closed": "door_stone_jagged_closed",
@@ -124,8 +124,13 @@ def objects():
         "boss": "door_stone_boss",
     }
     for name, src in door_kinds.items():
-        save(raw(f"{src}_top.png"), "tiles", f"door_{name}_v.png")
-        save(raw(f"{src}_left.png"), "tiles", f"door_{name}_h.png")
+        for side, suffix in (
+            ("top", "n"),
+            ("bottom", "s"),
+            ("left", "w"),
+            ("right", "e"),
+        ):
+            save(raw(f"{src}_{side}.png"), "tiles", f"door_{name}_{suffix}.png")
 
 
 def hazard_tiles():
