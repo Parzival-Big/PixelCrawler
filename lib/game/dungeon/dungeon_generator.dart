@@ -451,14 +451,22 @@ class DungeonGenerator {
         if (p != null) map.firePotSpawns.add(p);
       }
     }
-    for (var y = 0; y < map.height; y++) {
-      for (var x = 0; x < map.width; x++) {
-        if (map.tileAt(x, y) == TileType.wall &&
-            map.isWalkable(x, y + 1) &&
-            _rng.nextDouble() < 0.1) {
-          map.torchSpawns.add(Point(x, y));
-        }
+    // Torches use torch_wall art (bright brick face) → south walls only
+    // (floor to the north / wall_bottom). Skip door cells.
+    for (final info in infos) {
+      final outer = info.outerBounds;
+      final bottom = outer.top + outer.height - 1;
+      final candidates = <Point<int>>[];
+      for (var x = outer.left + 1; x < outer.left + outer.width - 1; x++) {
+        if (map.tileAt(x, bottom) != TileType.wall) continue;
+        if (map.isDoorTile(x, bottom)) continue;
+        if (!map.isWalkable(x, bottom - 1)) continue;
+        candidates.add(Point(x, bottom));
       }
+      if (candidates.isEmpty) continue;
+      candidates.shuffle(_rng);
+      final count = (1 + _rng.nextInt(2)).clamp(1, candidates.length);
+      map.torchSpawns.addAll(candidates.take(count));
     }
   }
 

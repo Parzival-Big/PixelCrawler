@@ -37,33 +37,25 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: PixelColors.bg,
-      body: AdaptiveSafeArea(
-        child: Column(
-          children: [
-            // HUD lives outside the room canvas so it never fights door lintels.
-            _HudBar(game: _game),
-            Expanded(
-              child: GameWidget<PixelCrawlerGame>(
-                game: _game,
-                overlayBuilderMap: {
-                  Overlays.pause: (context, game) => _PauseOverlay(
-                        game: game,
-                        onQuit: _quitToMenu,
-                      ),
-                  Overlays.gameOver: (context, game) => _GameOverOverlay(
-                        game: game,
-                        onRetry: _retry,
-                        onQuit: _quitToMenu,
-                      ),
-                  Overlays.unlock: (context, game) => _UnlockToast(game: game),
-                  Overlays.shop: (context, game) => ShopOverlay(game: game),
-                  Overlays.floorTransition: (context, game) =>
-                      _FloorTransitionOverlay(game: game),
-                },
+      body: GameWidget<PixelCrawlerGame>(
+        game: _game,
+        initialActiveOverlays: const [Overlays.hud],
+        overlayBuilderMap: {
+          Overlays.hud: (context, game) => _HudOverlay(game: game),
+          Overlays.pause: (context, game) => _PauseOverlay(
+                game: game,
+                onQuit: _quitToMenu,
               ),
-            ),
-          ],
-        ),
+          Overlays.gameOver: (context, game) => _GameOverOverlay(
+                game: game,
+                onRetry: _retry,
+                onQuit: _quitToMenu,
+              ),
+          Overlays.unlock: (context, game) => _UnlockToast(game: game),
+          Overlays.shop: (context, game) => ShopOverlay(game: game),
+          Overlays.floorTransition: (context, game) =>
+              _FloorTransitionOverlay(game: game),
+        },
       ),
     );
   }
@@ -75,118 +67,133 @@ class _GameScreenState extends State<GameScreen> {
 
 // ------------------------------------------------------------------- HUD
 
-class _HudBar extends StatelessWidget {
-  const _HudBar({required this.game});
+/// Hearts, inventory, floor label, minimap and pause — overlaid on the
+/// letterbox around the room (not inside the Flame world).
+class _HudOverlay extends StatelessWidget {
+  const _HudOverlay({required this.game});
 
   final PixelCrawlerGame game;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: PixelColors.bg,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _HeartsRow(game: game),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Image.asset(
-                        'assets/images/objects/coin.png',
-                        width: 18,
-                        height: 18,
-                        filterQuality: FilterQuality.none,
-                      ),
-                      const SizedBox(width: 4),
-                      ValueListenableBuilder<int>(
-                        valueListenable: game.coinsNotifier,
-                        builder: (_, coins, _) => Text(
-                          '$coins',
-                          style: const TextStyle(
-                            fontFamily: pixelFont,
-                            fontSize: 10,
-                            color: PixelColors.gold,
-                          ),
+    return AdaptiveSafeArea(
+      child: Stack(
+        children: [
+          // Hearts + coins/keys — top left
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _HeartsRow(game: game),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/images/objects/coin.png',
+                      width: 18,
+                      height: 18,
+                      filterQuality: FilterQuality.none,
+                    ),
+                    const SizedBox(width: 4),
+                    ValueListenableBuilder<int>(
+                      valueListenable: game.coinsNotifier,
+                      builder: (_, coins, _) => Text(
+                        '$coins',
+                        style: const TextStyle(
+                          fontFamily: pixelFont,
+                          fontSize: 10,
+                          color: PixelColors.gold,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Image.asset(
-                        'assets/images/objects/key.png',
-                        width: 18,
-                        height: 18,
-                        filterQuality: FilterQuality.none,
-                      ),
-                      const SizedBox(width: 4),
-                      ValueListenableBuilder<int>(
-                        valueListenable: game.keysNotifier,
-                        builder: (_, keys, _) => Text(
-                          '$keys',
-                          style: const TextStyle(
-                            fontFamily: pixelFont,
-                            fontSize: 10,
-                            color: PixelColors.textDim,
-                          ),
+                    ),
+                    const SizedBox(width: 12),
+                    Image.asset(
+                      'assets/images/objects/key.png',
+                      width: 18,
+                      height: 18,
+                      filterQuality: FilterQuality.none,
+                    ),
+                    const SizedBox(width: 4),
+                    ValueListenableBuilder<int>(
+                      valueListenable: game.keysNotifier,
+                      builder: (_, keys, _) => Text(
+                        '$keys',
+                        style: const TextStyle(
+                          fontFamily: pixelFont,
+                          fontSize: 10,
+                          color: PixelColors.textDim,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Image.asset(
-                        'assets/images/objects/key_boss.png',
-                        width: 18,
-                        height: 18,
-                        filterQuality: FilterQuality.none,
-                      ),
-                      const SizedBox(width: 4),
-                      ValueListenableBuilder<int>(
-                        valueListenable: game.bossKeysNotifier,
-                        builder: (_, keys, _) => Text(
-                          '$keys',
-                          style: const TextStyle(
-                            fontFamily: pixelFont,
-                            fontSize: 10,
-                            color: PixelColors.gold,
-                          ),
+                    ),
+                    const SizedBox(width: 10),
+                    Image.asset(
+                      'assets/images/objects/key_boss.png',
+                      width: 18,
+                      height: 18,
+                      filterQuality: FilterQuality.none,
+                    ),
+                    const SizedBox(width: 4),
+                    ValueListenableBuilder<int>(
+                      valueListenable: game.bossKeysNotifier,
+                      builder: (_, keys, _) => Text(
+                        '$keys',
+                        style: const TextStyle(
+                          fontFamily: pixelFont,
+                          fontSize: 10,
+                          color: PixelColors.gold,
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            ValueListenableBuilder<int>(
-              valueListenable: game.floorNotifier,
-              builder: (_, floor, _) => Padding(
-                padding: const EdgeInsets.only(top: 4, right: 10),
-                child: Text(
+          ),
+          // Floor label — top center
+          Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: ValueListenableBuilder<int>(
+                valueListenable: game.floorNotifier,
+                builder: (_, floor, _) => Text(
                   'PIANO $floor',
                   style: const TextStyle(
                     fontFamily: pixelFont,
                     fontSize: 12,
                     color: PixelColors.gold,
+                    shadows: [
+                      Shadow(color: Color(0xFF000000), offset: Offset(2, 2)),
+                    ],
                   ),
                 ),
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                PixelButton(
-                  label: 'II',
-                  fontSize: 9,
-                  onPressed: game.togglePause,
-                ),
-                const SizedBox(height: 10),
-                MiniMapOverlay(game: game),
-              ],
+          ),
+          // Pause — top right
+          Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: PixelButton(
+                label: 'STOP',
+                fontSize: 8,
+                onPressed: game.togglePause,
+              ),
             ),
-          ],
-        ),
+          ),
+          // Minimap — under pause
+          Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 48, right: 10),
+              child: MiniMapOverlay(game: game),
+            ),
+          ),
+        ],
       ),
     );
   }
