@@ -9,6 +9,7 @@ import '../services/save_service.dart';
 import '../ui/screens/character_select_screen.dart';
 import '../ui/screens/game_screen.dart';
 import '../ui/screens/main_menu_screen.dart';
+import '../ui/screens/store_screen.dart';
 import '../ui/theme.dart';
 
 Future<void> main() async {
@@ -26,6 +27,7 @@ Future<void> main() async {
       theme: buildPixelTheme(),
       home: switch (screen) {
         'select' => const CharacterSelectScreen(),
+        'store' => const StoreScreen(),
         'game' => GameScreen(heroType: hero),
         _ => const MainMenuScreen(),
       },

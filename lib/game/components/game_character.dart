@@ -47,7 +47,7 @@ abstract class GameCharacter extends SpriteAnimationComponent
         return false;
       }
     }
-    return true;
+    return !game.solidBlocksFeet(cx, cy, feetWidth, feetHeight);
   }
 
   /// Axis-separated movement against the tile grid; returns the applied delta.

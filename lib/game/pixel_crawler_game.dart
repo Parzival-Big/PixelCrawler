@@ -16,6 +16,7 @@ import 'components/effects.dart';
 import 'components/monster.dart';
 import 'components/pickups.dart';
 import 'components/player.dart';
+import 'components/solid_obstacle.dart';
 import 'dungeon/dungeon_generator.dart';
 import 'dungeon/dungeon_map.dart';
 import 'heroes.dart';
@@ -34,7 +35,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       : super(
           camera: CameraComponent.withFixedResolution(width: 384, height: 216),
         ) {
-    SessionBonus.extraHp = 0;
+    SessionBonus.resetFromSave(SaveService.instance);
   }
 
   final HeroType heroType;
@@ -105,9 +106,10 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     camera.viewport.addAll([_joystick, attackButton]);
 
     final def = heroes[heroType]!;
+    final startHp = def.maxHp + SessionBonus.permanentHp;
     player = Player(def: def, position: Vector2.zero());
-    hpNotifier.value = def.maxHp;
-    maxHpNotifier.value = def.maxHp;
+    hpNotifier.value = startHp;
+    maxHpNotifier.value = startHp;
 
     await _loadFloor();
   }
@@ -127,9 +129,12 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     for (final (p, kind) in map.decorSpawns) {
+      final idx = kind % GameAssets.decor.length;
+      // Indices 0..2 = barrel/crate/table (solid); 3..4 = skull/bone (litter).
       world.add(Decor(
         position: _tileBottom(p.x, p.y),
-        spec: GameAssets.decor[kind % GameAssets.decor.length],
+        spec: GameAssets.decor[idx],
+        solid: idx < 3,
       ));
     }
     for (final p in map.firePotSpawns) {
@@ -222,6 +227,22 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
 
   // ------------------------------------------------------------ events
 
+  /// True when a feet box centred at ([cx], [cy]) overlaps any solid prop.
+  bool solidBlocksFeet(double cx, double cy, double w, double h) {
+    for (final o in world.children.whereType<SolidObstacle>()) {
+      if (o.overlapsFeet(cx, cy, w, h)) return true;
+    }
+    return false;
+  }
+
+  /// True when a world point sits inside a solid prop (for projectiles).
+  bool solidBlocksPoint(Vector2 p) {
+    for (final o in world.children.whereType<SolidObstacle>()) {
+      if (o.containsWorldPoint(p)) return true;
+    }
+    return false;
+  }
+
   void addCoins(int n) {
     coins += n;
     coinsNotifier.value = coins;
@@ -243,7 +264,8 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   Future<void> goToNextFloor() async {
     floor++;
     floorNotifier.value = floor;
-    final justUnlocked = await SaveService.instance.reportFloorReached(floor);
+    final justUnlocked =
+        await SaveService.instance.reportFloorReached(floor, heroType);
     if (justUnlocked) {
       overlays.add(Overlays.unlock);
     }
@@ -252,8 +274,15 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
 
   Future<void> onPlayerDied() async {
     await SaveService.instance.reportRunEnded(coins: coins, kills: kills);
+    coins = 0;
     overlays.add(Overlays.gameOver);
     pauseEngine();
+  }
+
+  /// Banks any run coins still held (used when quitting from pause).
+  Future<void> bankAndQuit() async {
+    await SaveService.instance.reportRunEnded(coins: coins, kills: kills);
+    coins = 0;
   }
 
   void togglePause() {

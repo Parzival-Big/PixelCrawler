@@ -6,9 +6,20 @@ import '../theme.dart';
 import '../widgets/pixel_sprite.dart';
 import '../widgets/pixel_widgets.dart';
 import 'character_select_screen.dart';
+import 'store_screen.dart';
 
-class MainMenuScreen extends StatelessWidget {
+class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key});
+
+  @override
+  State<MainMenuScreen> createState() => _MainMenuScreenState();
+}
+
+class _MainMenuScreenState extends State<MainMenuScreen> {
+  Future<void> _open(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,31 +95,31 @@ class MainMenuScreen extends StatelessWidget {
                     label: 'GIOCA',
                     color: PixelColors.red,
                     fontSize: 14,
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const CharacterSelectScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: () => _open(const CharacterSelectScreen()),
+                  ),
+                  const SizedBox(height: 12),
+                  PixelButton(
+                    label: 'NEGOZIO',
+                    color: PixelColors.surfaceLight,
+                    fontSize: 12,
+                    onPressed: () => _open(const StoreScreen()),
                   ),
                   const SizedBox(height: 24),
-                  if (save.bestFloor > 0)
-                    PixelPanel(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        'RECORD: PIANO ${save.bestFloor}'
-                        '   MONETE: ${save.totalCoins}',
-                        style: const TextStyle(
-                          fontFamily: pixelFont,
-                          fontSize: 8,
-                          color: PixelColors.gold,
-                        ),
+                  PixelPanel(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Text(
+                      'RECORD: PIANO ${save.bestFloor}'
+                      '   MONETE: ${save.totalCoins}',
+                      style: const TextStyle(
+                        fontFamily: pixelFont,
+                        fontSize: 8,
+                        color: PixelColors.gold,
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

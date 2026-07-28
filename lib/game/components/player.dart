@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flame/components.dart';
 
+import '../../services/save_service.dart';
 import '../heroes.dart';
 import 'attacks.dart';
 import 'game_character.dart';
@@ -11,7 +12,7 @@ class Player extends GameCharacter {
   Player({required this.def, required super.position})
       : super(
           frameSize: def.anim.size,
-          maxHp: def.maxHp + SessionBonus.extraHp,
+          maxHp: def.maxHp + SessionBonus.extraHp + SessionBonus.permanentHp,
         );
 
   final HeroDef def;
@@ -22,6 +23,11 @@ class Player extends GameCharacter {
   double _invulnTimer = 0;
 
   static const aimRange = 130.0;
+
+  double get moveSpeed => def.speed + SessionBonus.permanentSpeed;
+
+  double get attackCooldown =>
+      (def.attackCooldown - SessionBonus.permanentCooldown).clamp(0.15, 2.0);
 
   @override
   Future<void> onLoad() async {
@@ -37,7 +43,7 @@ class Player extends GameCharacter {
 
     final input = game.moveInput();
     if (input.length2 > 0.01) {
-      final delta = input.normalized() * def.speed * dt;
+      final delta = input.normalized() * moveSpeed * dt;
       moveAndCollide(delta);
       facing = input.normalized();
       faceDirection(input.x);
@@ -51,7 +57,7 @@ class Player extends GameCharacter {
 
   void tryAttack() {
     if (_attackTimer > 0 || isDead) return;
-    _attackTimer = def.attackCooldown;
+    _attackTimer = attackCooldown;
 
     // Auto-aim at the nearest monster in range, otherwise use facing.
     var dir = facing.clone();
@@ -69,7 +75,7 @@ class Player extends GameCharacter {
     }
     faceDirection(dir.x);
 
-    var dmg = def.damage;
+    var dmg = def.damage + SessionBonus.permanentDamage;
     if (def.critChance > 0 && _rng.nextDouble() < def.critChance) {
       dmg *= 2;
     }
@@ -114,7 +120,22 @@ class Player extends GameCharacter {
   }
 }
 
-/// Run-scoped bonuses (blue potions raise max HP for the current run).
+/// Bonuses active for the current run.
+///
+/// [extraHp] grows mid-run from blue potions; the permanent fields are
+/// loaded from the merchant once at the start of the run.
 class SessionBonus {
   static int extraHp = 0;
+  static int permanentHp = 0;
+  static int permanentDamage = 0;
+  static double permanentSpeed = 0;
+  static double permanentCooldown = 0;
+
+  static void resetFromSave(SaveService save) {
+    extraHp = 0;
+    permanentHp = save.bonusMaxHp;
+    permanentDamage = save.bonusDamage;
+    permanentSpeed = save.bonusSpeed;
+    permanentCooldown = save.bonusAttackCooldown;
+  }
 }

@@ -270,7 +270,8 @@ class _PauseOverlay extends StatelessWidget {
               PixelButton(
                 label: 'ESCI',
                 color: PixelColors.red,
-                onPressed: () {
+                onPressed: () async {
+                  await game.bankAndQuit();
                   game.resumeEngine();
                   onQuit();
                 },
