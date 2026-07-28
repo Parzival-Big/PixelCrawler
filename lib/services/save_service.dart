@@ -7,21 +7,9 @@ import '../game/heroes.dart';
 class SaveService {
   SaveService._(this._prefs);
 
-  static const _kSlimeUnlocked = 'slime_unlocked';
   static const _kBestFloor = 'best_floor';
   static const _kTotalCoins = 'total_coins';
   static const _kTotalKills = 'total_kills';
-
-  /// Floor that every base hero must reach to unlock the Slime.
-  static const slimeUnlockFloor = 20;
-
-  /// Heroes that must each hit [slimeUnlockFloor] before Slime unlocks.
-  static const slimeUnlockHeroes = <HeroType>[
-    HeroType.knight,
-    HeroType.mage,
-    HeroType.hunter,
-    HeroType.rogue,
-  ];
 
   static SaveService? _instance;
   final SharedPreferences _prefs;
@@ -35,7 +23,6 @@ class SaveService {
   @visibleForTesting
   static void resetForTest() => _instance = null;
 
-  bool get slimeUnlocked => _prefs.getBool(_kSlimeUnlocked) ?? false;
   int get bestFloor => _prefs.getInt(_kBestFloor) ?? 0;
   int get totalCoins => _prefs.getInt(_kTotalCoins) ?? 0;
   int get totalKills => _prefs.getInt(_kTotalKills) ?? 0;
@@ -43,27 +30,68 @@ class SaveService {
   int bestFloorFor(HeroType hero) =>
       _prefs.getInt('best_floor_${hero.name}') ?? 0;
 
-  /// True once every base hero has reached [slimeUnlockFloor].
-  bool get slimeRequirementsMet => slimeUnlockHeroes
-      .every((h) => bestFloorFor(h) >= slimeUnlockFloor);
+  bool isUnlocked(HeroType hero) {
+    final def = heroes[hero]!;
+    final rule = def.unlock;
+    if (rule == null) return true;
+    return rule.requiredHeroes
+        .every((h) => bestFloorFor(h) >= rule.floor);
+  }
 
-  Future<void> unlockSlime() => _prefs.setBool(_kSlimeUnlocked, true);
+  /// Whether the locked card should appear in the roster.
+  bool isRevealed(HeroType hero) {
+    final rule = heroes[hero]!.unlock;
+    if (rule == null) return true;
+    final gate = rule.revealAfterUnlock;
+    if (gate == null) return true;
+    return isUnlocked(gate);
+  }
 
-  /// Records progress for [hero]. Returns true when this call just unlocked
-  /// the Slime.
-  Future<bool> reportFloorReached(int floor, HeroType hero) async {
-    var justUnlocked = false;
+  /// Heroes shown on the select screen (starters + revealed unlockables).
+  List<HeroDef> get visibleHeroes => [
+        for (final def in heroes.values)
+          if (isRevealed(def.type)) def,
+      ];
+
+  /// Returns the set of heroes that were just unlocked by this report.
+  Future<Set<HeroType>> reportFloorReached(int floor, HeroType hero) async {
     if (floor > bestFloor) {
       await _prefs.setInt(_kBestFloor, floor);
     }
-    if (hero != HeroType.slime && floor > bestFloorFor(hero)) {
+    if (floor > bestFloorFor(hero)) {
       await _prefs.setInt('best_floor_${hero.name}', floor);
     }
-    if (!slimeUnlocked && slimeRequirementsMet) {
-      await unlockSlime();
-      justUnlocked = true;
+
+    final newly = <HeroType>{};
+    for (final def in heroes.values) {
+      final rule = def.unlock;
+      if (rule == null) continue;
+      final key = 'unlocked_${def.type.name}';
+      final already = _prefs.getBool(key) ?? false;
+      if (!already && isUnlocked(def.type)) {
+        await _prefs.setBool(key, true);
+        newly.add(def.type);
+      }
     }
-    return justUnlocked;
+    return newly;
+  }
+
+  /// Back-compat helpers used by older UI/tests.
+  bool get slimeUnlocked => isUnlocked(HeroType.slime);
+  static const slimeUnlockFloor = 20;
+  static const slimeUnlockHeroes = <HeroType>[
+    HeroType.knight,
+    HeroType.mage,
+    HeroType.hunter,
+    HeroType.rogue,
+  ];
+  bool get slimeRequirementsMet => isUnlocked(HeroType.slime);
+  Future<void> unlockSlime() async {
+    await _prefs.setInt('best_floor_knight', slimeUnlockFloor);
+    await _prefs.setInt('best_floor_mage', slimeUnlockFloor);
+    await _prefs.setInt('best_floor_hunter', slimeUnlockFloor);
+    await _prefs.setInt('best_floor_rogue', slimeUnlockFloor);
+    await _prefs.setBool('unlocked_slime', true);
   }
 
   Future<void> reportRunEnded({required int coins, required int kills}) async {

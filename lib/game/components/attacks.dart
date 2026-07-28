@@ -40,7 +40,7 @@ class MeleeSwing extends SpriteAnimationComponent
   }
 }
 
-/// Arrow / fireball / blob shot travelling in a straight line.
+/// Arrow / fireball / bone shot travelling in a straight line.
 class Projectile extends SpriteAnimationComponent
     with HasGameReference<PixelCrawlerGame> {
   Projectile._({
@@ -87,6 +87,21 @@ class Projectile extends SpriteAnimationComponent
       splashRadius: 22,
       maxRange: 150,
     ).._animSpec = GameAssets.fireball;
+  }
+
+  factory Projectile.bone({
+    required Vector2 origin,
+    required Vector2 direction,
+    required int damage,
+  }) {
+    return Projectile._(
+      origin: origin,
+      direction: direction,
+      damage: damage,
+      speed: 180,
+      splashRadius: 0,
+      maxRange: 160,
+    ).._spec = GameAssets.bone;
   }
 
   final Vector2 velocity;
@@ -146,7 +161,97 @@ class Projectile extends SpriteAnimationComponent
   }
 }
 
-/// Quick expanding ring shown when a fireball detonates.
+/// Hostile shot aimed at the player (arrows / dark bolts).
+class EnemyProjectile extends SpriteAnimationComponent
+    with HasGameReference<PixelCrawlerGame> {
+  EnemyProjectile({
+    required Vector2 origin,
+    required Vector2 direction,
+    required this.damage,
+    this.speed = 160,
+    this.maxRange = 150,
+    this._spec,
+    this._animSpec,
+  })  : velocity = direction.normalized() * speed,
+        _start = origin.clone(),
+        super(
+          position: origin.clone(),
+          size: Vector2.all(16),
+          anchor: Anchor.center,
+          angle: atan2(direction.y, direction.x),
+        );
+
+  factory EnemyProjectile.arrow({
+    required Vector2 origin,
+    required Vector2 direction,
+    required int damage,
+  }) {
+    return EnemyProjectile(
+      origin: origin,
+      direction: direction,
+      damage: damage,
+      speed: 170,
+      spec: GameAssets.arrow,
+    );
+  }
+
+  factory EnemyProjectile.bolt({
+    required Vector2 origin,
+    required Vector2 direction,
+    required int damage,
+  }) {
+    return EnemyProjectile(
+      origin: origin,
+      direction: direction,
+      damage: damage,
+      speed: 130,
+      maxRange: 140,
+      animSpec: GameAssets.fireball,
+    );
+  }
+
+  final Vector2 velocity;
+  final int damage;
+  final double speed;
+  final double maxRange;
+  final Vector2 _start;
+  final SpriteSpec? _spec;
+  final AnimSpec? _animSpec;
+
+  @override
+  Future<void> onLoad() async {
+    if (_animSpec != null) {
+      animation = _animSpec!.animation();
+    } else if (_spec != null) {
+      animation = SpriteAnimation.spriteList([_spec!.sprite()], stepTime: 1);
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    position += velocity * dt;
+    priority = (position.y * 10).round() + 5;
+
+    if (position.distanceTo(_start) > maxRange ||
+        !game.map.isWalkable(position.x ~/ tileSize, position.y ~/ tileSize) ||
+        game.solidBlocksPoint(position)) {
+      removeFromParent();
+      return;
+    }
+
+    final player = game.player;
+    if (player != null && !player.isDead) {
+      final feet = player.position - Vector2(0, player.size.y / 2);
+      if (feet.distanceTo(position) < 9) {
+        player.receiveContactDamage(damage);
+        removeFromParent();
+      }
+    }
+  }
+}
+
+/// Quick expanding ring shown when a fireball / bomb detonates.
 class ExplosionPuff extends PositionComponent {
   ExplosionPuff({required Vector2 position, required this.radius})
       : super(position: position, anchor: Anchor.center);

@@ -46,15 +46,15 @@ class CharacterSelectScreen extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final cards = [
-                    for (final def in heroes.values)
+                    for (final def in save.visibleHeroes)
                       _HeroCard(
                         def: def,
-                        locked: def.unlockable && !save.slimeUnlocked,
+                        locked: !save.isUnlocked(def.type),
                       ),
                   ];
 
                   // Portrait / folded: vertical list. Wide tablet: wrap grid.
-                  // Phone landscape: horizontal carousel.
+                  // Phone landscape: horizontal carousel with height-fit cards.
                   if (mq.isPortrait) {
                     return ListView.separated(
                       padding: const EdgeInsets.symmetric(
@@ -80,16 +80,20 @@ class CharacterSelectScreen extends StatelessWidget {
                       ),
                     );
                   }
+                  final cardHeight = constraints.maxHeight - 8;
                   return Center(
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
-                        vertical: 16,
+                        vertical: 4,
                       ),
                       itemCount: cards.length,
                       separatorBuilder: (_, _) => const SizedBox(width: 16),
-                      itemBuilder: (_, i) => cards[i],
+                      itemBuilder: (_, i) => SizedBox(
+                        height: cardHeight,
+                        child: cards[i],
+                      ),
                     ),
                   );
                 },
@@ -112,120 +116,147 @@ class _HeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final save = SaveService.instance;
     return PixelPanel(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       child: SizedBox(
         width: 190,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              locked ? '???' : def.name.toUpperCase(),
-              style: TextStyle(
-                fontFamily: pixelFont,
-                fontSize: 12,
-                color: locked ? PixelColors.textDim : PixelColors.gold,
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 96,
-              child: locked
-                  ? const Icon(
-                      Icons.lock,
-                      size: 48,
-                      color: PixelColors.textDim,
-                    )
-                  : PixelSpriteAnimation(spec: def.anim, scale: 5),
-            ),
-            const SizedBox(height: 10),
-            if (locked)
-              _SlimeUnlockProgress(save: save)
-            else ...[
-              Text(
-                def.description,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: pixelFont,
-                  fontSize: 6,
-                  height: 1.8,
-                  color: PixelColors.textDim,
-                ),
-              ),
-              const SizedBox(height: 10),
-              StatPips(label: 'VITA', value: def.hpPips, color: PixelColors.red),
-              const SizedBox(height: 4),
-              StatPips(label: 'ATK', value: def.atkPips, color: PixelColors.gold),
-              const SizedBox(height: 4),
-              StatPips(label: 'VEL', value: def.spdPips, color: PixelColors.green),
-              if (!def.unlockable) ...[
-                const SizedBox(height: 8),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final content = Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
                 Text(
-                  'MAX P${save.bestFloorFor(def.type)}'
-                  '/${SaveService.slimeUnlockFloor}',
-                  style: const TextStyle(
+                  locked ? '???' : def.name.toUpperCase(),
+                  style: TextStyle(
                     fontFamily: pixelFont,
-                    fontSize: 6,
-                    color: PixelColors.textDim,
+                    fontSize: 12,
+                    color: locked ? PixelColors.textDim : PixelColors.gold,
                   ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 72,
+                  child: locked
+                      ? const Icon(
+                          Icons.lock,
+                          size: 40,
+                          color: PixelColors.textDim,
+                        )
+                      : PixelSpriteAnimation(spec: def.anim, scale: 4),
+                ),
+                const SizedBox(height: 8),
+                if (locked)
+                  _UnlockProgress(def: def, save: save)
+                else ...[
+                  Text(
+                    def.description,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: pixelFont,
+                      fontSize: 6,
+                      height: 1.6,
+                      color: PixelColors.textDim,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  StatPips(
+                    label: 'VITA',
+                    value: def.hpPips,
+                    color: PixelColors.red,
+                  ),
+                  const SizedBox(height: 3),
+                  StatPips(
+                    label: 'ATK',
+                    value: def.atkPips,
+                    color: PixelColors.gold,
+                  ),
+                  const SizedBox(height: 3),
+                  StatPips(
+                    label: 'VEL',
+                    value: def.spdPips,
+                    color: PixelColors.green,
+                  ),
+                  if (!def.unlockable) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'MAX P${save.bestFloorFor(def.type)}',
+                      style: const TextStyle(
+                        fontFamily: pixelFont,
+                        fontSize: 6,
+                        color: PixelColors.textDim,
+                      ),
+                    ),
+                  ],
+                ],
+                const SizedBox(height: 10),
+                PixelButton(
+                  label: locked ? 'BLOCCATO' : 'GIOCA',
+                  enabled: !locked,
+                  color: locked ? PixelColors.surface : PixelColors.green,
+                  textColor: locked ? PixelColors.textDim : PixelColors.bg,
+                  fontSize: 9,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => GameScreen(heroType: def.type),
+                      ),
+                    );
+                  },
                 ),
               ],
-            ],
-            const SizedBox(height: 12),
-            PixelButton(
-              label: locked ? 'BLOCCATO' : 'GIOCA',
-              enabled: !locked,
-              color: locked ? PixelColors.surface : PixelColors.green,
-              textColor: locked ? PixelColors.textDim : PixelColors.bg,
-              fontSize: 9,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => GameScreen(heroType: def.type),
-                  ),
-                );
-              },
-            ),
-          ],
+            );
+
+            // Fit card content into the available height (avoids BOTTOM OVERFLOW).
+            if (constraints.maxHeight.isFinite && constraints.maxHeight > 0) {
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: SizedBox(width: 170, child: content),
+              );
+            }
+            return content;
+          },
         ),
       ),
     );
   }
 }
 
-class _SlimeUnlockProgress extends StatelessWidget {
-  const _SlimeUnlockProgress({required this.save});
+class _UnlockProgress extends StatelessWidget {
+  const _UnlockProgress({required this.def, required this.save});
 
+  final HeroDef def;
   final SaveService save;
 
   @override
   Widget build(BuildContext context) {
+    final rule = def.unlock!;
+    final names = rule.requiredHeroes.map((h) => heroes[h]!.name).join(', ');
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'Raggiungi il piano '
-          '${SaveService.slimeUnlockFloor}\n'
-          'con TUTTI questi eroi:',
+        Text(
+          'Raggiungi il piano ${rule.floor}\ncon: $names',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: pixelFont,
             fontSize: 6,
-            height: 1.8,
+            height: 1.6,
             color: PixelColors.textDim,
           ),
         ),
-        const SizedBox(height: 8),
-        for (final hero in SaveService.slimeUnlockHeroes)
+        const SizedBox(height: 6),
+        for (final hero in rule.requiredHeroes)
           Padding(
-            padding: const EdgeInsets.only(bottom: 3),
+            padding: const EdgeInsets.only(bottom: 2),
             child: Text(
               '${heroes[hero]!.name.toUpperCase()}  '
-              '${save.bestFloorFor(hero)}'
-              '/${SaveService.slimeUnlockFloor}'
-              '${save.bestFloorFor(hero) >= SaveService.slimeUnlockFloor ? '  OK' : ''}',
+              '${save.bestFloorFor(hero)}/${rule.floor}'
+              '${save.bestFloorFor(hero) >= rule.floor ? '  OK' : ''}',
               style: TextStyle(
                 fontFamily: pixelFont,
                 fontSize: 6,
-                color: save.bestFloorFor(hero) >= SaveService.slimeUnlockFloor
+                color: save.bestFloorFor(hero) >= rule.floor
                     ? PixelColors.gold
                     : PixelColors.textDim,
               ),

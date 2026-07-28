@@ -53,6 +53,8 @@ class _GameScreenState extends State<GameScreen> {
               ),
           Overlays.unlock: (context, game) => _UnlockToast(game: game),
           Overlays.shop: (context, game) => ShopOverlay(game: game),
+          Overlays.floorTransition: (context, game) =>
+              const _FloorTransitionOverlay(),
         },
       ),
     );
@@ -369,6 +371,9 @@ class _UnlockToastState extends State<_UnlockToast> {
 
   @override
   Widget build(BuildContext context) {
+    final names = widget.game.lastUnlocked
+        .map((h) => heroes[h]!.name.toUpperCase())
+        .join(', ');
     return AdaptiveSafeArea(
       child: Align(
         alignment: Alignment.bottomCenter,
@@ -378,9 +383,12 @@ class _UnlockToastState extends State<_UnlockToast> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             color: PixelColors.surfaceLight,
-            child: const Text(
-              'NUOVO EROE SBLOCCATO: SLIME!',
-              style: TextStyle(
+            child: Text(
+              names.isEmpty
+                  ? 'NUOVO EROE SBLOCCATO!'
+                  : 'NUOVO EROE SBLOCCATO: $names!',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
                 fontFamily: pixelFont,
                 fontSize: 9,
                 color: PixelColors.gold,
@@ -388,6 +396,28 @@ class _UnlockToastState extends State<_UnlockToast> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------ floor transition
+
+class _FloorTransitionOverlay extends StatelessWidget {
+  const _FloorTransitionOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 280),
+        builder: (context, t, _) {
+          return ColoredBox(
+            color: Color.fromRGBO(14, 34, 43, t.clamp(0.0, 1.0)),
+            child: const SizedBox.expand(),
+          );
+        },
       ),
     );
   }

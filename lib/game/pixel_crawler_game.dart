@@ -31,6 +31,7 @@ class Overlays {
   static const gameOver = 'gameOver';
   static const unlock = 'unlock';
   static const shop = 'shop';
+  static const floorTransition = 'floorTransition';
 }
 
 class PixelCrawlerGame extends FlameGame with KeyboardEvents {
@@ -51,6 +52,17 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   int floor = 1;
   int coins = 0;
   int kills = 0;
+
+  /// Floors since the last merchant visit (pity counter).
+  int floorsWithoutShop = 0;
+
+  /// Heroes unlocked by the most recent floor report (for toast UI).
+  Set<HeroType> lastUnlocked = {};
+
+  /// Base merchant chance; rises by [shopPityStep] each missed floor,
+  /// then resets here when the shop appears.
+  static const shopChance = 0.05;
+  static const shopPityStep = 0.05;
 
   late final hpNotifier = ValueNotifier<int>(0);
   late final maxHpNotifier = ValueNotifier<int>(0);
@@ -212,11 +224,10 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
 
     for (final (p, kind) in map.decorSpawns) {
       final idx = kind % GameAssets.decor.length;
-      // Indices 0..2 = barrel/crate/table (solid); 3..4 = skull/bone (litter).
       world.add(Decor(
         position: _tileBottom(p.x, p.y),
         spec: GameAssets.decor[idx],
-        solid: idx < 3,
+        kind: idx,
       ));
     }
     for (final p in map.firePotSpawns) {
@@ -320,6 +331,22 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     return false;
   }
 
+  /// True when the player's current room contains the given world position.
+  bool playerSharesRoomWith(Vector2 worldPos) {
+    final p = player;
+    if (p == null) return false;
+    final pr = map.roomContaining(
+      p.position.x ~/ tileSize,
+      p.position.y ~/ tileSize,
+    );
+    if (pr == null) return false;
+    final or_ = map.roomContaining(
+      worldPos.x ~/ tileSize,
+      worldPos.y ~/ tileSize,
+    );
+    return identical(pr, or_);
+  }
+
   void addCoins(int n) {
     coins += n;
     coinsNotifier.value = coins;
@@ -370,24 +397,38 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     world.add(FloatingText(text: '$amount', position: worldPos));
   }
 
-  /// Chance to meet the between-floor merchant when descending.
-  static const shopChance = 0.05;
+  /// Current merchant encounter chance (base + pity).
+  double get currentShopChance =>
+      (shopChance + floorsWithoutShop * shopPityStep).clamp(0.0, 1.0);
 
   Future<void> goToNextFloor() async {
     floor++;
     floorNotifier.value = floor;
-    final justUnlocked =
+    lastUnlocked =
         await SaveService.instance.reportFloorReached(floor, heroType);
-    if (justUnlocked && overlays.registeredOverlays.contains(Overlays.unlock)) {
+    if (lastUnlocked.isNotEmpty &&
+        overlays.registeredOverlays.contains(Overlays.unlock)) {
       overlays.add(Overlays.unlock);
     }
 
-    final meetMerchant = _rng.nextDouble() < shopChance;
+    // Floor transition overlay (fade) before loading / shop.
+    if (overlays.registeredOverlays.contains(Overlays.floorTransition)) {
+      overlays.add(Overlays.floorTransition);
+      await Future<void>.delayed(const Duration(milliseconds: 280));
+    }
+
+    final meetMerchant = _rng.nextDouble() < currentShopChance;
     if (meetMerchant && overlays.registeredOverlays.contains(Overlays.shop)) {
+      floorsWithoutShop = 0;
       pauseEngine();
       overlays.add(Overlays.shop);
     } else {
+      floorsWithoutShop++;
       await _loadFloor();
+    }
+
+    if (overlays.isActive(Overlays.floorTransition)) {
+      overlays.remove(Overlays.floorTransition);
     }
   }
 
@@ -396,7 +437,14 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     if (overlays.isActive(Overlays.shop)) {
       overlays.remove(Overlays.shop);
     }
+    if (overlays.registeredOverlays.contains(Overlays.floorTransition)) {
+      overlays.add(Overlays.floorTransition);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
     await _loadFloor();
+    if (overlays.isActive(Overlays.floorTransition)) {
+      overlays.remove(Overlays.floorTransition);
+    }
     resumeEngine();
   }
 

@@ -4,7 +4,10 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 
 import '../../config/game_assets.dart';
+import '../monsters.dart';
 import '../pixel_crawler_game.dart';
+import 'attacks.dart';
+import 'monster.dart';
 import 'player.dart';
 import 'solid_obstacle.dart';
 
@@ -81,6 +84,62 @@ class PotionPickup extends Pickup {
   }
 }
 
+/// Lit bomb dropped from chests. Explodes after [fuse] seconds and can kill
+/// the player (and nearby monsters).
+class BombPickup extends SpriteAnimationComponent
+    with HasGameReference<PixelCrawlerGame> {
+  BombPickup({required Vector2 position, this.fuse = 2.0})
+      : super(
+          position: position,
+          size: Vector2.all(16),
+          anchor: Anchor.bottomCenter,
+        );
+
+  final double fuse;
+  double _t = 0;
+  static const blastRadius = 28.0;
+  static const blastDamage = 99;
+
+  @override
+  Future<void> onLoad() async {
+    animation = GameAssets.bomb.animation(stepTimeOverride: 0.12);
+    priority = (position.y * 10).round() + 2;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _t += dt;
+    priority = (position.y * 10).round() + 2;
+    // Speed up blink as fuse runs out.
+    final remaining = (fuse - _t).clamp(0.0, fuse);
+    animationTicker?.clock;
+    if (_t >= fuse) {
+      _detonate();
+    } else if (remaining < 0.5) {
+      opacity = ((_t * 16).floor().isOdd) ? 0.35 : 1;
+    }
+  }
+
+  void _detonate() {
+    game.world.add(ExplosionPuff(position: position.clone(), radius: blastRadius));
+    final player = game.player;
+      if (player != null && !player.isDead) {
+      if (player.position.distanceTo(position) <= blastRadius) {
+        // Bombs ignore brief invulnerability frames and can one-shot.
+        player.receiveDamage(blastDamage);
+        game.hpNotifier.value = player.hp;
+      }
+    }
+    for (final m in game.world.children.query<Monster>().toList()) {
+      if (m.position.distanceTo(position) <= blastRadius) {
+        m.receiveDamage(blastDamage);
+      }
+    }
+    removeFromParent();
+  }
+}
+
 /// Opens on touch and pops out loot. Blocks movement until opened.
 class Chest extends SpriteComponent
     with HasGameReference<PixelCrawlerGame>, SolidObstacle {
@@ -123,6 +182,12 @@ class Chest extends SpriteComponent
       if (_rng.nextDouble() < 0.35) {
         game.world.add(PotionPickup.blue(
           position: position + Vector2(0, 14),
+        ));
+      }
+      // Chance to drop a live bomb (dangerous loot).
+      if (_rng.nextDouble() < 0.28) {
+        game.world.add(BombPickup(
+          position: position + Vector2((_rng.nextDouble() - 0.5) * 12, 10),
         ));
       }
     }
@@ -191,15 +256,17 @@ class FirePot extends SpriteAnimationComponent with SolidObstacle {
   }
 }
 
-/// Static decorative prop (barrel, crate, bones...), y-sorted.
+/// Static decorative prop (barrel, crate, table, skull, bones...), y-sorted.
 ///
-/// Chunkier props ([solid] = true) block feet and projectiles; flat floor
-/// litter like skulls and bones does not.
-class Decor extends SpriteComponent with SolidObstacle {
+/// All decor kinds block feet and projectiles. Skulls and bones may
+/// transmute into a skeleton while the player lingers in the same room
+/// (1-in-10 chance each check).
+class Decor extends SpriteComponent
+    with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   Decor({
     required Vector2 position,
     required this.spec,
-    this.solid = true,
+    this.kind = 0,
   }) : super(
           position: position,
           size: Vector2.all(16),
@@ -207,22 +274,54 @@ class Decor extends SpriteComponent with SolidObstacle {
         );
 
   final SpriteSpec spec;
-  final bool solid;
+
+  /// Index into [GameAssets.decor] (3 = skull, 4 = bone).
+  final int kind;
+
+  final _rng = Random();
+  double _transformTimer = 0;
+  bool _transformed = false;
+
+  bool get isBoneLitter => kind >= 3;
 
   @override
-  double get solidWidth => solid ? 11 : 0;
+  double get solidWidth => 11;
   @override
-  double get solidHeight => solid ? 9 : 0;
-
-  @override
-  ui.Rect get solidRect {
-    if (!solid) return ui.Rect.zero;
-    return super.solidRect;
-  }
+  double get solidHeight => 9;
 
   @override
   Future<void> onLoad() async {
     sprite = spec.sprite();
     priority = (position.y * 10).round();
+    _transformTimer = 2 + _rng.nextDouble() * 3;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    priority = (position.y * 10).round();
+    if (!isBoneLitter || _transformed) return;
+
+    final player = game.player;
+    if (player == null || player.isDead) return;
+
+    // Only roll while the player shares this room.
+    if (!game.playerSharesRoomWith(position)) return;
+
+    _transformTimer -= dt;
+    if (_transformTimer > 0) return;
+    _transformTimer = 4 + _rng.nextDouble() * 4;
+
+    // 1-in-10 chance to become a random available skeleton.
+    if (_rng.nextInt(10) != 0) return;
+
+    _transformed = true;
+    final type = skeletonVariants[_rng.nextInt(skeletonVariants.length)];
+    game.world.add(Monster(
+      def: monsters[type]!,
+      position: position.clone(),
+      floor: game.floor,
+    ));
+    removeFromParent();
   }
 }

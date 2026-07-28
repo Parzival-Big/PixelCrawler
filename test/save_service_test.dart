@@ -18,7 +18,7 @@ void main() {
     // One hero alone is not enough.
     expect(
       await save.reportFloorReached(SaveService.slimeUnlockFloor, HeroType.knight),
-      isFalse,
+      isEmpty,
     );
     expect(save.slimeUnlocked, isFalse);
     expect(save.bestFloorFor(HeroType.knight), SaveService.slimeUnlockFloor);
@@ -27,23 +27,55 @@ void main() {
       HeroType.mage,
       HeroType.hunter,
     ]) {
-      expect(await save.reportFloorReached(20, hero), isFalse);
+      expect(await save.reportFloorReached(20, hero), isEmpty);
     }
 
     // The last required hero unlocks it.
-    expect(await save.reportFloorReached(20, HeroType.rogue), isTrue);
+    expect(
+      await save.reportFloorReached(20, HeroType.rogue),
+      contains(HeroType.slime),
+    );
     expect(save.slimeUnlocked, isTrue);
     expect(save.slimeRequirementsMet, isTrue);
+    expect(save.isRevealed(HeroType.mummy), isTrue);
 
     // Reported only once.
-    expect(await save.reportFloorReached(25, HeroType.knight), isFalse);
+    expect(await save.reportFloorReached(25, HeroType.knight), isEmpty);
   });
 
-  test('slime runs do not count toward the unlock', () async {
+  test('mummy unlocks at floor 50 with slime', () async {
     final save = await SaveService.load();
-    await save.reportFloorReached(20, HeroType.slime);
-    expect(save.bestFloorFor(HeroType.slime), 0);
-    expect(save.slimeUnlocked, isFalse);
+    // Unlock slime first so mummy is revealed.
+    for (final h in SaveService.slimeUnlockHeroes) {
+      await save.reportFloorReached(20, h);
+    }
+    expect(save.isRevealed(HeroType.mummy), isTrue);
+    expect(save.isUnlocked(HeroType.mummy), isFalse);
+
+    expect(await save.reportFloorReached(50, HeroType.slime),
+        contains(HeroType.mummy));
+    expect(save.isUnlocked(HeroType.mummy), isTrue);
+  });
+
+  test('mushroom needs hunter and knight at 50', () async {
+    final save = await SaveService.load();
+    await save.reportFloorReached(50, HeroType.hunter);
+    expect(await save.reportFloorReached(50, HeroType.knight),
+        contains(HeroType.mushroom));
+    expect(save.isUnlocked(HeroType.mushroom), isTrue);
+  });
+
+  test('witch unlocks at 70 with mage; dragon needs everyone at 100', () async {
+    final save = await SaveService.load();
+    expect(await save.reportFloorReached(70, HeroType.mage),
+        contains(HeroType.witch));
+    expect(save.isUnlocked(HeroType.witch), isTrue);
+    expect(save.isRevealed(HeroType.dragon), isTrue);
+
+    for (final h in HeroType.values.where((h) => h != HeroType.dragon)) {
+      await save.reportFloorReached(100, h);
+    }
+    expect(save.isUnlocked(HeroType.dragon), isTrue);
   });
 
   test('run totals accumulate', () async {

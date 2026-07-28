@@ -99,6 +99,12 @@ class Player extends GameCharacter {
           direction: dir,
           damage: dmg,
         ));
+      case AttackStyle.bone:
+        game.world.add(Projectile.bone(
+          origin: position - Vector2(0, size.y / 2),
+          direction: dir,
+          damage: dmg,
+        ));
     }
   }
 

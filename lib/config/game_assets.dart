@@ -55,8 +55,13 @@ class GameAssets {
   static const bat = AnimSpec('monsters/bat.png', 16, 16, 2, 0.14);
   static const rat = AnimSpec('monsters/rat.png', 16, 16, 2, 0.18);
   static const skeleton = AnimSpec('monsters/skeleton.png', 16, 16, 2, 0.25);
+  static const skeletonArcher =
+      AnimSpec('monsters/skeleton_archer.png', 16, 16, 2, 0.25);
+  static const skeletonNecromancer =
+      AnimSpec('monsters/skeleton_necromancer.png', 16, 16, 2, 0.28);
   static const spider = AnimSpec('monsters/spider.png', 16, 16, 2, 0.16);
   static const ghost = AnimSpec('monsters/ghost.png', 16, 16, 2, 0.3);
+  static const flyingEye = AnimSpec('monsters/flying_eye.png', 16, 16, 2, 0.14);
 
   // ----------------------------------------------------------- heroes
   static const knight = AnimSpec('heroes/knight.png', 16, 16, 2, 0.25);
@@ -64,11 +69,19 @@ class GameAssets {
   static const hunter = AnimSpec('heroes/hunter.png', 16, 16, 2, 0.25);
   static const rogue = AnimSpec('heroes/rogue.png', 16, 16, 2, 0.25);
   static const slimeHero = AnimSpec('heroes/slime_hero.png', 16, 16, 2, 0.3);
+  static const mummy = AnimSpec('heroes/mummy.png', 16, 16, 2, 0.28);
+  static const mushroom = AnimSpec('heroes/mushroom.png', 16, 16, 2, 0.26);
+  static const witch = AnimSpec('heroes/witch.png', 16, 16, 2, 0.25);
+  static const dragon = AnimSpec('heroes/dragon.png', 16, 16, 2, 0.22);
+
+  // Bomb: idle + lit fuse (2 frames).
+  static const bomb = AnimSpec('objects/bomb.png', 16, 16, 2, 0.2);
 
   // ---------------------------------------------------------- effects
   static const slash = AnimSpec('effects/slash.png', 16, 16, 3, 0.05);
   static const fireball = AnimSpec('effects/fireball.png', 16, 16, 4, 0.08);
   static const arrow = SpriteSpec('effects/arrow.png');
+  static const bone = SpriteSpec('effects/bone.png');
 
   // --------------------------------------------------------------- ui
   static const heartFull = SpriteSpec('ui/heart_full.png');
@@ -90,16 +103,25 @@ class GameAssets {
         'monsters/bat.png',
         'monsters/rat.png',
         'monsters/skeleton.png',
+        'monsters/skeleton_archer.png',
+        'monsters/skeleton_necromancer.png',
         'monsters/spider.png',
         'monsters/ghost.png',
+        'monsters/flying_eye.png',
         'heroes/knight.png',
         'heroes/mage.png',
         'heroes/hunter.png',
         'heroes/rogue.png',
         'heroes/slime_hero.png',
+        'heroes/mummy.png',
+        'heroes/mushroom.png',
+        'heroes/witch.png',
+        'heroes/dragon.png',
+        'objects/bomb.png',
         'effects/slash.png',
         'effects/fireball.png',
         'effects/arrow.png',
+        'effects/bone.png',
         'ui/heart_full.png',
         'ui/heart_half.png',
         'ui/heart_empty.png',

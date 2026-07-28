@@ -111,13 +111,23 @@ def objects():
     save(raw("objects", "sword.png"), "objects", "sword.png")
     save(raw("objects", "boot.png"), "objects", "boot.png")
     save(raw("objects", "shield.png"), "objects", "shield.png")
+    save(strip([raw("objects", "bomb.png"), raw("objects", "bomb_active.png")]),
+         "objects", "bomb.png")
 
 
 # ------------------------------------------------------------- monsters
 
 def two_frames(name):
-    return strip([raw("monsters", f"{name}.png"),
-                  raw("monsters", f"{name}_.png")])
+    """Idle strip: prefer the dark-outlined frame; bob the second frame."""
+    return outlined_bob(name)
+
+
+def outlined_bob(name):
+    """Use ONLY the dark-outlined sprite (no underscore). Second frame = 1px bob."""
+    base = raw("monsters", f"{name}.png")
+    bobbed = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    bobbed.paste(base, (0, -1), base)
+    return strip([base, bobbed])
 
 
 def monsters():
@@ -125,20 +135,25 @@ def monsters():
     save(two_frames("bat"), "monsters", "bat.png")
     save(two_frames("rat"), "monsters", "rat.png")
     save(two_frames("skeleton_warrior"), "monsters", "skeleton.png")
+    save(two_frames("skeleton_archer"), "monsters", "skeleton_archer.png")
+    save(two_frames("skeleton_necromancer"), "monsters", "skeleton_necromancer.png")
     save(two_frames("spider"), "monsters", "spider.png")
     save(two_frames("ghost"), "monsters", "ghost.png")
+    save(two_frames("flying_eye"), "monsters", "flying_eye.png")
 
 
 # --------------------------------------------------------------- heroes
 
 def heroes():
-    for hero in ("knight", "mage", "hunter", "rogue"):
-        save(two_frames(hero), "heroes", f"{hero}.png")
+    for hero in ("knight", "mage", "hunter", "rogue", "mummy", "mushroom", "witch", "dragon"):
+        save(outlined_bob(hero), "heroes", f"{hero}.png")
 
-    # The unlockable Slime is the pack slime wearing a little crown.
+    # Unlockable Slime: outlined slime + crown (both frames keep the outline).
     frames = []
-    for suffix in ("", "_"):
-        img = raw("monsters", f"slime{suffix}.png").copy()
+    base = raw("monsters", "slime.png")
+    for dy in (0, -1):
+        img = Image.new("RGBA", base.size, (0, 0, 0, 0))
+        img.paste(base, (0, dy), base)
         top = _first_opaque_row(img)
         crown_y = max(0, top - 3)
         for dx in (5, 8, 11):

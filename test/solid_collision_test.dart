@@ -30,7 +30,7 @@ void main() {
       final barrel = Decor(
         position: player.position + Vector2(12, 0),
         spec: GameAssets.decor.first,
-        solid: true,
+        kind: 0,
       );
       game.world.add(barrel);
       await barrel.loaded;
@@ -74,19 +74,22 @@ void main() {
   );
 
   testWithGame<PixelCrawlerGame>(
-    'floor litter (skull/bone) does not block movement',
+    'skull and bone litter also block movement',
     () => PixelCrawlerGame(heroType: HeroType.knight),
     (game) async {
       game.update(0);
       final player = game.player!;
       final litter = Decor(
-        position: player.position + Vector2(10, 0),
+        position: player.position + Vector2(12, 0),
         spec: GameAssets.decor[3],
-        solid: false,
+        kind: 3,
       );
       game.world.add(litter);
       await litter.loaded;
+      game.update(0);
 
+      expect(litter.isMounted, isTrue);
+      expect(litter.solidWidth, greaterThan(0));
       expect(
         game.solidBlocksFeet(
           litter.position.x,
@@ -94,13 +97,15 @@ void main() {
           player.feetWidth,
           player.feetHeight,
         ),
-        isFalse,
+        isTrue,
       );
 
-      for (var i = 0; i < 20; i++) {
+      final before = player.position.clone();
+      for (var i = 0; i < 30; i++) {
         player.moveAndCollide(Vector2(2, 0));
       }
-      expect(player.position.x, greaterThan(litter.position.x));
+      expect(player.position.x, lessThan(litter.position.x - 2));
+      expect(player.position.x, greaterThanOrEqualTo(before.x));
     },
   );
 }
