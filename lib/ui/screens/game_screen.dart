@@ -30,16 +30,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _retry() {
-    setState(() {
-      _game = PixelCrawlerGame(heroType: widget.heroType);
-    });
+    unawaited(_game.restartRun());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GameWidget<PixelCrawlerGame>.controlled(
-        gameFactory: () => _game,
+      body: GameWidget<PixelCrawlerGame>(
+        game: _game,
         initialActiveOverlays: const [Overlays.hud],
         overlayBuilderMap: {
           Overlays.hud: (context, game) => _Hud(game: game),
