@@ -8,8 +8,11 @@ import '../pixel_crawler_game.dart';
 import 'dungeon_renderer.dart';
 import 'solid_obstacle.dart';
 
-/// Door between rooms. Uses the pack's directional wall-door tile for the
-/// wall side it sits on (n/s/e/w). Locked doors consume a normal key.
+/// Door between rooms.
+///
+/// Facing follows the wall of the *current* room (shared wall tiles flip
+/// when you enter the neighbour). North doors draw above the hero so it
+/// looks like they walk under the lintel / portcullis.
 class Door extends SpriteComponent
     with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   Door({required this.spawn})
@@ -24,6 +27,13 @@ class Door extends SpriteComponent
 
   final DoorSpawn spawn;
   bool open = false;
+  DoorDir _displayDir = DoorDir.north;
+
+  /// Above any y-sorted character so north lintels cover the hero.
+  static const underpassPriority = 100000;
+
+  /// Just above the baked dungeon, behind characters.
+  static const behindPriority = -9995;
 
   @override
   double get solidWidth => open ? 0 : tileSize;
@@ -37,15 +47,44 @@ class Door extends SpriteComponent
     return Rect.fromLTWH(position.x, position.y, tileSize, tileSize);
   }
 
+  /// Which way this doorway faces from the room the player is in.
+  DoorDir facingForRoom(RoomInfo? room) {
+    if (room == null) return spawn.dir;
+    final edge = _edgeOnRoom(room);
+    return edge ?? spawn.dir;
+  }
+
+  /// True when this tile sits on [room]'s outer wall ring.
+  bool isOnPerimeterOf(RoomInfo? room) {
+    if (room == null) return false;
+    return _edgeOnRoom(room) != null;
+  }
+
+  DoorDir? _edgeOnRoom(RoomInfo room) {
+    final outer = room.outerBounds;
+    final x = spawn.pos.x;
+    final y = spawn.pos.y;
+    final right = outer.left + outer.width - 1;
+    final bottom = outer.top + outer.height - 1;
+    if (x < outer.left || x > right || y < outer.top || y > bottom) {
+      return null;
+    }
+    if (y == outer.top) return DoorDir.north;
+    if (y == bottom) return DoorDir.south;
+    if (x == outer.left) return DoorDir.west;
+    if (x == right) return DoorDir.east;
+    return null;
+  }
+
   @override
   Future<void> onLoad() async {
     open = !spawn.locked;
-    _refreshSprite();
-    priority = -9995;
+    _displayDir = spawn.dir;
+    opacity = 0;
+    _applyVisuals();
   }
 
-  SpriteSpec _specFor({required bool opened}) {
-    final dir = spawn.dir;
+  SpriteSpec _specFor({required bool opened, required DoorDir dir}) {
     if (opened) {
       return switch (dir) {
         DoorDir.north => GameAssets.doorOpenN,
@@ -78,13 +117,35 @@ class Door extends SpriteComponent
     };
   }
 
-  void _refreshSprite() {
-    sprite = _specFor(opened: open).sprite();
+  void _applyVisuals() {
+    sprite = _specFor(opened: open, dir: _displayDir).sprite();
+    // North wall doors sit in front of the hero (walk-under lintel).
+    // Other sides stay behind so the hero walks in front of the frame.
+    priority =
+        _displayDir == DoorDir.north ? underpassPriority : behindPriority;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (opacity <= 0) return;
+    super.render(canvas);
   }
 
   @override
   void update(double dt) {
     super.update(dt);
+
+    final room = game.currentRoom;
+    final onPerimeter = isOnPerimeterOf(room);
+    opacity = onPerimeter ? 1 : 0;
+    if (!onPerimeter) return;
+
+    final facing = facingForRoom(room);
+    if (facing != _displayDir) {
+      _displayDir = facing;
+      _applyVisuals();
+    }
+
     if (open) return;
     final player = game.player;
     if (player == null || player.isDead) return;
@@ -98,11 +159,11 @@ class Door extends SpriteComponent
     if (spawn.locked) {
       if (game.tryUseKey()) {
         open = true;
-        _refreshSprite();
+        _applyVisuals();
       }
     } else {
       open = true;
-      _refreshSprite();
+      _applyVisuals();
     }
   }
 }

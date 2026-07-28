@@ -3,12 +3,16 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 
 import '../pixel_crawler_game.dart';
+import 'door.dart';
 import 'dungeon_renderer.dart';
 
 /// Opaque panels around the current room so adjacent rooms never peek into
 /// the letterboxed / overflow camera area (BoI single-room framing).
+///
+/// Priority sits above north-door underpass sprites so neighbour doors/walls
+/// cannot draw on top of the mask.
 class RoomOccluder extends Component with HasGameReference<PixelCrawlerGame> {
-  RoomOccluder() : super(priority: 50000);
+  RoomOccluder() : super(priority: Door.underpassPriority + 1);
 
   static final _paint = ui.Paint()..color = const ui.Color(0xFF0E222B);
 
