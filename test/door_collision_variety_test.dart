@@ -104,6 +104,144 @@ void main() {
     }
     expect(high.length, greaterThanOrEqualTo(low.length));
   });
+
+  test('each doorway has one shared spawn tagged with both room keys', () {
+    final map = DungeonGenerator(floor: 1, seed: 4).generate();
+    expect(map.doorSpawns, isNotEmpty);
+    final byCell = <String, int>{};
+    for (final d in map.doorSpawns) {
+      final cell = '${d.pos.x},${d.pos.y}';
+      byCell[cell] = (byCell[cell] ?? 0) + 1;
+      expect(d.roomKeys.length, 2);
+    }
+    for (final e in byCell.entries) {
+      expect(e.value, 1, reason: 'duplicate door spawn at ${e.key}');
+    }
+  });
+
+  testWithGame<PixelCrawlerGame>(
+    'crossing into an uncleared room ejects the player off the doorway',
+    () => PixelCrawlerGame(heroType: HeroType.knight),
+    (game) async {
+      game.update(0);
+      final start = game.currentRoom!;
+      for (final m in game.world.children.query<Monster>().toList()) {
+        m.hp = 0;
+        m.removeFromParent();
+      }
+      game.update(0);
+
+      final door = game.world.children
+          .query<Door>()
+          .where((d) => d.isOnPerimeterOf(start) && d.open)
+          .first;
+      expect(door.open, isTrue);
+
+      final otherKey =
+          door.spawn.roomKeys.firstWhere((k) => k != start.gridKey);
+      final parts = otherKey.split(',');
+      final other = game.map.roomInfos.firstWhere(
+        (r) => r.gridX == int.parse(parts[0]) && r.gridY == int.parse(parts[1]),
+      );
+
+      final ob = other.bounds;
+      final slime = Monster(
+        def: monsters[MonsterType.slime]!,
+        position: Vector2(
+          (ob.left + ob.width / 2) * tileSize,
+          (ob.top + ob.height / 2) * tileSize,
+        ),
+        floor: 1,
+      );
+      await game.world.add(slime);
+
+      final facing = door.facingForRoom(other);
+      final dx = switch (facing) {
+        DoorDir.west => 1,
+        DoorDir.east => -1,
+        _ => 0,
+      };
+      final dy = switch (facing) {
+        DoorDir.north => 1,
+        DoorDir.south => -1,
+        _ => 0,
+      };
+      game.player!.position = Vector2(
+        (door.spawn.pos.x + dx) * tileSize + tileSize / 2,
+        (door.spawn.pos.y + dy) * tileSize + tileSize - 2,
+      );
+
+      game.update(0);
+      expect(game.currentRoom?.gridKey, other.gridKey);
+      expect(game.currentRoomCleared, isFalse);
+      game.update(0);
+      expect(door.open, isFalse);
+
+      final px = game.player!.position.x ~/ tileSize;
+      final py = game.player!.position.y ~/ tileSize;
+      expect(game.map.isDoorTile(px, py), isFalse);
+      expect(game.map.roomInfoContaining(px, py)?.gridKey, other.gridKey);
+      expect(door.playerOverlapsDoorway(), isFalse);
+      expect(door.blocksPassage, isTrue);
+
+      final before = game.player!.position.clone();
+      final toward = Vector2(
+        (ob.left + ob.width / 2) * tileSize,
+        (ob.top + ob.height / 2) * tileSize,
+      );
+      final step = (toward - before)..normalize();
+      final moved = game.player!.moveAndCollide(step * 4);
+      expect(moved.length, greaterThan(0));
+    },
+  );
+
+  testWithGame<PixelCrawlerGame>(
+    'unlocking a locked door persists without spending another key',
+    () => PixelCrawlerGame(heroType: HeroType.knight),
+    (game) async {
+      game.update(0);
+      for (final m in game.world.children.query<Monster>().toList()) {
+        m.hp = 0;
+        m.removeFromParent();
+      }
+      game.keys = 2;
+      game.keysNotifier.value = 2;
+      game.update(0);
+
+      final locked = game.world.children
+          .query<Door>()
+          .where((d) => d.spawn.locked && d.isOnPerimeterOf(game.currentRoom))
+          .toList();
+
+      if (locked.isEmpty) {
+        final spawn = DoorSpawn(
+          pos: const Point(0, 0),
+          dir: DoorDir.north,
+          locked: true,
+          roomKeys: {'0,0', '1,0'},
+        );
+        expect(spawn.unlocked, isFalse);
+        spawn.unlocked = true;
+        expect(spawn.unlocked, isTrue);
+        return;
+      }
+
+      final door = locked.first;
+      game.player!.position = Vector2(
+        door.spawn.pos.x * tileSize + tileSize / 2,
+        door.spawn.pos.y * tileSize + tileSize / 2,
+      );
+      game.update(0);
+      expect(door.spawn.unlocked, isTrue);
+      expect(door.open, isTrue);
+
+      final keysBefore = game.keys;
+      door.setOpen(false);
+      game.update(0);
+      expect(door.open, isTrue);
+      expect(game.keys, keysBefore);
+    },
+  );
 }
 
 int _layoutFingerprint(RoomLayouts layouts, {required int floor}) {

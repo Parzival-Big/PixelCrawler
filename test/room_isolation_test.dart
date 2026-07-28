@@ -73,7 +73,7 @@ void main() {
       expect(renderer.size.x, outer.width * tileSize + tileOverhang * 2);
       expect(renderer.size.y, outer.height * tileSize + tileOverhang * 2);
 
-      // Torches outside the current room are hidden; in-room ones are 1.5×.
+      // Torches outside the current room are hidden; in-room ones match tile scale.
       for (final torch in game.world.children.query<Torch>()) {
         game.update(0);
         final inRoom = tileInCurrentRoom(game, torch.tileX, torch.tileY);

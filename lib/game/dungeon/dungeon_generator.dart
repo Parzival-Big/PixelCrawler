@@ -288,6 +288,7 @@ class DungeonGenerator {
       dir: dirA,
       locked: locked,
       bossDoor: toBoss,
+      roomKeys: {'${a.gx},${a.gy}', '${b.gx},${b.gy}'},
     ));
   }
 

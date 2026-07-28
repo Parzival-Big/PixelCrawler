@@ -33,14 +33,15 @@ enum WallSide {
       };
 }
 
-/// A door opening between two rooms.
+/// A door opening between two rooms (one shared cell, one open/closed state).
 class DoorSpawn {
   DoorSpawn({
     required this.pos,
     required this.dir,
     required this.locked,
     this.bossDoor = false,
-  });
+    Set<String>? roomKeys,
+  }) : roomKeys = roomKeys ?? {};
 
   final Point<int> pos;
   final DoorDir dir;
@@ -50,6 +51,12 @@ class DoorSpawn {
 
   /// Visual boss door (entrance to boss room).
   final bool bossDoor;
+
+  /// Grid keys of the two rooms this doorway connects.
+  final Set<String> roomKeys;
+
+  /// Set when a locked door is unlocked with a key (persists both sides).
+  bool unlocked = false;
 }
 
 /// Wall-mounted torch spawn (sprite strip chosen by [side]).
