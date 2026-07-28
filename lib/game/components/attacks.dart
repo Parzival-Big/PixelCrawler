@@ -32,6 +32,7 @@ class MeleeSwing extends SpriteAnimationComponent
     animation = GameAssets.slash.animation(loop: false);
     priority = (position.y * 10).round() + 5;
     for (final m in game.world.children.query<Monster>()) {
+      if (!m.isActivated) continue;
       final feet = m.position - Vector2(0, m.size.y / 2);
       if (feet.distanceTo(position) <= hitRadius) {
         m.receiveDamage(damage);
@@ -138,6 +139,7 @@ class Projectile extends SpriteAnimationComponent
     }
 
     for (final m in game.world.children.query<Monster>()) {
+      if (!m.isActivated) continue;
       final feet = m.position - Vector2(0, m.size.y / 2);
       if (feet.distanceTo(position) < 9) {
         _explode(hit: m);
@@ -149,6 +151,7 @@ class Projectile extends SpriteAnimationComponent
   void _explode({Monster? hit}) {
     if (splashRadius > 0) {
       for (final m in game.world.children.query<Monster>()) {
+        if (!m.isActivated) continue;
         final feet = m.position - Vector2(0, m.size.y / 2);
         if (feet.distanceTo(position) <= splashRadius) {
           m.receiveDamage(damage);
