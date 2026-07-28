@@ -88,7 +88,7 @@ class PotionPickup extends Pickup {
 /// the player (and nearby monsters).
 class BombPickup extends SpriteAnimationComponent
     with HasGameReference<PixelCrawlerGame> {
-  BombPickup({required Vector2 position, this.fuse = 2.0})
+  BombPickup({required Vector2 position, this.fuse = 1.0})
       : super(
           position: position,
           size: Vector2.all(16),
