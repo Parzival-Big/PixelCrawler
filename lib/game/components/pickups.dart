@@ -269,15 +269,15 @@ class StairsTrigger extends PositionComponent
   }
 }
 
-/// Animated torch baked into a south-facing wall tile (drawn over the
-/// baked wall).
+/// Animated torch overlay on a south wall (`wall_bottom` / torch_wall art).
 class Torch extends SpriteAnimationComponent {
   Torch({required Vector2 position})
       : super(
           position: position,
           size: Vector2.all(16),
           anchor: Anchor.topLeft,
-          priority: -9998,
+          // Above baked walls, below the hero and door frames.
+          priority: -9990,
         );
 
   @override

@@ -11,12 +11,19 @@ import 'solid_obstacle.dart';
 /// Door between rooms.
 ///
 /// Facing follows the wall of the *current* room. When open, the dark
-/// opening draws *behind* the hero and the lintel / bars draw *in front*
-/// so the hero appears to walk under the frame.
+/// opening draws *behind* the hero and the structural frame draws *in front*
+/// so the hero appears to walk under / through the doorway.
+///
+/// Frame vs opening depends on facing (from pack sprites):
+/// - North: bright lintel on top, dark threshold below
+/// - South: dark opening on top, bright wall face below
+/// - West: bright frame on the left, dark opening on the right
+/// - East: dark opening on the left, bright frame on the right
 class Door extends SpriteComponent
     with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   Door({required this.spawn})
-      : super(
+      : _displayDir = spawn.dir,
+        super(
           position: Vector2(
             spawn.pos.x * tileSize,
             spawn.pos.y * tileSize,
@@ -31,22 +38,40 @@ class Door extends SpriteComponent
   DoorDir _displayDir = DoorDir.north;
   DoorLintel? _lintel;
 
-  /// Lintel / frame above y-sorted characters.
+  /// Structural frame above y-sorted characters.
   static const underpassPriority = 100000;
 
   /// Opening / threshold behind characters.
   static const behindPriority = -9995;
 
-  /// How many pixels from the top of the tile are the overhanging frame.
-  double get lintelHeight {
+  DoorDir get displayDir => _displayDir;
+
+  /// Structural frame drawn above the hero by [DoorLintel].
+  Rect get frameRect {
     switch (_displayDir) {
       case DoorDir.north:
-        return 8;
+        return const Rect.fromLTWH(0, 0, 16, 7);
       case DoorDir.south:
-        return 7;
-      case DoorDir.east:
+        // Bright wall body under the arch — occludes the hero in 2.5D.
+        return const Rect.fromLTWH(0, 9, 16, 7);
       case DoorDir.west:
-        return 6;
+        return const Rect.fromLTWH(0, 0, 7, 16);
+      case DoorDir.east:
+        return const Rect.fromLTWH(9, 0, 7, 16);
+    }
+  }
+
+  /// Dark passage kept under the hero.
+  Rect get openingRect {
+    switch (_displayDir) {
+      case DoorDir.north:
+        return const Rect.fromLTWH(0, 7, 16, 9);
+      case DoorDir.south:
+        return const Rect.fromLTWH(0, 0, 16, 9);
+      case DoorDir.west:
+        return const Rect.fromLTWH(7, 0, 9, 16);
+      case DoorDir.east:
+        return const Rect.fromLTWH(0, 0, 9, 16);
     }
   }
 
@@ -139,7 +164,7 @@ class Door extends SpriteComponent
 
   void _applyVisuals() {
     sprite = _specFor(opened: open, dir: _displayDir).sprite();
-    // Closed doors sit fully in front; open doors split opening/lintel.
+    // Closed doors sit fully in front; open doors split opening/frame.
     priority = open ? behindPriority : underpassPriority;
     _lintel?.sync();
   }
@@ -151,10 +176,10 @@ class Door extends SpriteComponent
       super.render(canvas);
       return;
     }
-    // Only the dark opening / threshold (below the lintel).
-    final h = lintelHeight;
+    // Only the dark opening (under the hero).
+    final openRect = openingRect;
     canvas.save();
-    canvas.clipRect(Rect.fromLTWH(0, h, size.x, size.y - h));
+    canvas.clipRect(openRect);
     super.render(canvas);
     canvas.restore();
   }
@@ -197,7 +222,7 @@ class Door extends SpriteComponent
   }
 }
 
-/// Top strip of an open door drawn above the hero.
+/// Structural door frame drawn above the hero.
 class DoorLintel extends PositionComponent
     with HasGameReference<PixelCrawlerGame> {
   DoorLintel({required this.door})
@@ -218,9 +243,9 @@ class DoorLintel extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (door.opacity <= 0 || !door.open || door.sprite == null) return;
-    final h = door.lintelHeight;
+    final frame = door.frameRect;
     canvas.save();
-    canvas.clipRect(Rect.fromLTWH(0, 0, size.x, h));
+    canvas.clipRect(frame);
     door.sprite!.render(canvas, size: size);
     canvas.restore();
   }

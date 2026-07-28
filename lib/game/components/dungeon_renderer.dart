@@ -54,10 +54,11 @@ class DungeonRenderer extends SpriteComponent {
           case TileType.pit:
             GameAssets.pit.sprite().render(canvas, position: pos, size: sizeVec);
           case TileType.wall:
-            final name = _wallTileName(x, y);
+            final name = wallTileNameFor(map, x, y);
             if (name != null) {
               final sheet = GameAssets.wallTiles[name]!;
-              final variant = (x * 7 + y * 13) % sheet.frames;
+              // Stick to plain frames — later variants read as fake sconces.
+              final variant = (x * 7 + y * 13) % (sheet.frames >= 2 ? 2 : 1);
               sheet.frame(variant).render(canvas, position: pos, size: sizeVec);
             }
           case TileType.stairs:
@@ -72,34 +73,48 @@ class DungeonRenderer extends SpriteComponent {
     sprite = Sprite(image);
     size = Vector2(map.width * tileSize, map.height * tileSize);
   }
+}
 
-  /// Picks the wall tile orientation from the walkable neighbours.
-  ///
-  /// Pack names match room sides: `top` = north wall, `bottom` = south,
-  /// `left` = west, `right` = east.
-  String? _wallTileName(int x, int y) {
-    bool f(int dx, int dy) => map.isWalkable(x + dx, y + dy);
-    final n = f(0, -1), s = f(0, 1), w = f(-1, 0), e = f(1, 0);
+/// Picks the wall tile orientation from the walkable neighbours.
+///
+/// Pack names match room sides: `top` = north wall, `bottom` = south,
+/// `left` = west, `right` = east.
+///
+/// Rectangular room corners only have floor on the inward diagonal (the
+/// orthogonal neighbours are other wall tiles), so those must use
+/// `inner_*` — not `outer_*` (reserved for convex exterior corners).
+String? wallTileNameFor(DungeonMap map, int x, int y) {
+  bool f(int dx, int dy) => map.isWalkable(x + dx, y + dy);
+  final n = f(0, -1), s = f(0, 1), w = f(-1, 0), e = f(1, 0);
 
-    // Floor on two orthogonal sides: inner corner toward the floor.
-    if (s && e) return 'inner_tl';
-    if (s && w) return 'inner_tr';
-    if (n && e) return 'inner_bl';
-    if (n && w) return 'inner_br';
+  // Floor on two orthogonal sides: inner corner toward the floor.
+  if (s && e) return 'inner_tl';
+  if (s && w) return 'inner_tr';
+  if (n && e) return 'inner_bl';
+  if (n && w) return 'inner_br';
 
-    // Floor on one side → that side of the room.
-    if (s) return 'top';
-    if (n) return 'bottom';
-    if (e) return 'left';
-    if (w) return 'right';
+  // Floor on one side → that side of the room.
+  if (s) return 'top';
+  if (n) return 'bottom';
+  if (e) return 'left';
+  if (w) return 'right';
 
-    // Floor only diagonally: outer corner.
-    if (f(1, 1)) return 'outer_tl';
-    if (f(-1, 1)) return 'outer_tr';
-    if (f(1, -1)) return 'outer_bl';
-    if (f(-1, -1)) return 'outer_br';
-    return null;
-  }
+  // Floor only diagonally: still an *inner* room corner for rectangles.
+  if (f(1, 1)) return 'inner_tl';
+  if (f(-1, 1)) return 'inner_tr';
+  if (f(1, -1)) return 'inner_bl';
+  if (f(-1, -1)) return 'inner_br';
+
+  // Convex exterior corners (wall protrusions / freestanding blocks).
+  final wallN = map.tileAt(x, y - 1) == TileType.wall;
+  final wallS = map.tileAt(x, y + 1) == TileType.wall;
+  final wallW = map.tileAt(x - 1, y) == TileType.wall;
+  final wallE = map.tileAt(x + 1, y) == TileType.wall;
+  if (wallS && wallE && !wallN && !wallW) return 'outer_tl';
+  if (wallS && wallW && !wallN && !wallE) return 'outer_tr';
+  if (wallN && wallE && !wallS && !wallW) return 'outer_bl';
+  if (wallN && wallW && !wallS && !wallE) return 'outer_br';
+  return null;
 }
 
 /// Soft additive glow used under torches and fire pots.

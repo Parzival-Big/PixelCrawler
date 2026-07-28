@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pixel_crawler/game/components/door.dart';
@@ -104,4 +106,42 @@ void main() {
       expect(occluder.priority, greaterThan(Door.underpassPriority));
     },
   );
+
+  group('door frame / opening by facing', () {
+    Door _door(DoorDir dir) => Door(
+          spawn: DoorSpawn(
+            pos: const Point(0, 0),
+            dir: dir,
+            locked: false,
+          ),
+        );
+
+    test('north: frame top, opening bottom', () {
+      final d = _door(DoorDir.north);
+      expect(d.frameRect.top, 0);
+      expect(d.openingRect.top, greaterThan(0));
+      expect(d.frameRect.overlaps(d.openingRect), isFalse);
+    });
+
+    test('south: opening top, frame bottom', () {
+      final d = _door(DoorDir.south);
+      expect(d.openingRect.top, 0);
+      expect(d.frameRect.top, greaterThan(0));
+      expect(d.frameRect.overlaps(d.openingRect), isFalse);
+    });
+
+    test('west: frame left, opening right', () {
+      final d = _door(DoorDir.west);
+      expect(d.frameRect.left, 0);
+      expect(d.openingRect.left, greaterThan(0));
+      expect(d.frameRect.overlaps(d.openingRect), isFalse);
+    });
+
+    test('east: opening left, frame right', () {
+      final d = _door(DoorDir.east);
+      expect(d.openingRect.left, 0);
+      expect(d.frameRect.left, greaterThan(0));
+      expect(d.frameRect.overlaps(d.openingRect), isFalse);
+    });
+  });
 }
