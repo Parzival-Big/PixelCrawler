@@ -36,12 +36,21 @@ void main() {
           expect(map.tileAt(map.stairsPos.x, map.stairsPos.y), TileType.stairs);
           expect(reachable(map, map.playerSpawn, map.stairsPos), isTrue,
               reason: 'stairs must be reachable from spawn');
+          expect(map.monsterSpawns, isNotEmpty);
           expect(map.bossSpawn, isNotNull);
           expect(map.doorSpawns, isNotEmpty);
           expect(
             map.roomInfos.any((r) => r.kind == RoomKind.boss),
             isTrue,
           );
+
+          // Every chest must be reachable from the player spawn (tile path).
+          for (final chest in map.chestSpawns) {
+            expect(map.isWalkable(chest.x, chest.y), isTrue,
+                reason: 'chest at $chest must be walkable');
+            expect(reachable(map, map.playerSpawn, chest), isTrue,
+                reason: 'chest at $chest must be reachable from spawn');
+          }
 
           for (final p in [
             ...map.monsterSpawns,

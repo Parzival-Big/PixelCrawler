@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flame/components.dart';
 
 import '../../config/game_assets.dart';
@@ -6,53 +8,78 @@ import '../pixel_crawler_game.dart';
 import 'dungeon_renderer.dart';
 import 'solid_obstacle.dart';
 
-/// Door between rooms. Locked doors consume a normal key; open doors are passable.
+/// Door between rooms. Uses the pack's directional wall-door tile for the
+/// wall side it sits on (n/s/e/w). Locked doors consume a normal key.
 class Door extends SpriteComponent
     with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   Door({required this.spawn})
       : super(
           position: Vector2(
-            spawn.pos.x * tileSize + tileSize / 2,
-            spawn.pos.y * tileSize + tileSize,
+            spawn.pos.x * tileSize,
+            spawn.pos.y * tileSize,
           ),
           size: Vector2.all(tileSize),
-          anchor: Anchor.bottomCenter,
+          anchor: Anchor.topLeft,
         );
 
   final DoorSpawn spawn;
   bool open = false;
 
-  bool get isVertical =>
-      spawn.dir == DoorDir.north || spawn.dir == DoorDir.south;
+  @override
+  double get solidWidth => open ? 0 : tileSize;
+  @override
+  double get solidHeight => open ? 0 : tileSize;
 
+  /// Door uses top-left anchoring (wall tile space), not bottom-center.
   @override
-  double get solidWidth => open ? 0 : 14;
-  @override
-  double get solidHeight => open ? 0 : 12;
+  Rect get solidRect {
+    if (open) return Rect.zero;
+    return Rect.fromLTWH(position.x, position.y, tileSize, tileSize);
+  }
 
   @override
   Future<void> onLoad() async {
-    open = !spawn.locked && !spawn.bossDoor;
+    open = !spawn.locked;
     _refreshSprite();
-    priority = (position.y * 10).round();
+    priority = -9995;
+  }
+
+  SpriteSpec _specFor({required bool opened}) {
+    final dir = spawn.dir;
+    if (opened) {
+      return switch (dir) {
+        DoorDir.north => GameAssets.doorOpenN,
+        DoorDir.south => GameAssets.doorOpenS,
+        DoorDir.east => GameAssets.doorOpenE,
+        DoorDir.west => GameAssets.doorOpenW,
+      };
+    }
+    if (spawn.bossDoor) {
+      return switch (dir) {
+        DoorDir.north => GameAssets.doorBossN,
+        DoorDir.south => GameAssets.doorBossS,
+        DoorDir.east => GameAssets.doorBossE,
+        DoorDir.west => GameAssets.doorBossW,
+      };
+    }
+    if (spawn.locked) {
+      return switch (dir) {
+        DoorDir.north => GameAssets.doorLockedN,
+        DoorDir.south => GameAssets.doorLockedS,
+        DoorDir.east => GameAssets.doorLockedE,
+        DoorDir.west => GameAssets.doorLockedW,
+      };
+    }
+    return switch (dir) {
+      DoorDir.north => GameAssets.doorClosedN,
+      DoorDir.south => GameAssets.doorClosedS,
+      DoorDir.east => GameAssets.doorClosedE,
+      DoorDir.west => GameAssets.doorClosedW,
+    };
   }
 
   void _refreshSprite() {
-    final vertical = isVertical;
-    if (open) {
-      sprite = (vertical ? GameAssets.doorOpenV : GameAssets.doorOpenH).sprite();
-    } else if (spawn.bossDoor) {
-      sprite = (vertical ? GameAssets.doorBossV : GameAssets.doorBossH).sprite();
-      // Boss doors start open so you can fight; stairs need the boss key.
-      open = true;
-      sprite = (vertical ? GameAssets.doorOpenV : GameAssets.doorOpenH).sprite();
-    } else if (spawn.locked) {
-      sprite =
-          (vertical ? GameAssets.doorLockedV : GameAssets.doorLockedH).sprite();
-    } else {
-      sprite =
-          (vertical ? GameAssets.doorClosedV : GameAssets.doorClosedH).sprite();
-    }
+    sprite = _specFor(opened: open).sprite();
   }
 
   @override
@@ -61,7 +88,12 @@ class Door extends SpriteComponent
     if (open) return;
     final player = game.player;
     if (player == null || player.isDead) return;
-    if (player.position.distanceTo(position) > 18) return;
+
+    final doorCenter = Vector2(
+      spawn.pos.x * tileSize + tileSize / 2,
+      spawn.pos.y * tileSize + tileSize / 2,
+    );
+    if (player.position.distanceTo(doorCenter) > 20) return;
 
     if (spawn.locked) {
       if (game.tryUseKey()) {

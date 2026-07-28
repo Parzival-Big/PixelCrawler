@@ -60,15 +60,23 @@ class GameAssets {
   static const trapSmall = AnimSpec('tiles/trap_small.png', 16, 16, 2, 0.35);
   static const trapBig = AnimSpec('tiles/trap_big.png', 16, 16, 2, 0.4);
 
-  // Doors: vertical (N/S openings) and horizontal (E/W openings).
-  static const doorOpenV = SpriteSpec('tiles/door_open_v.png');
-  static const doorOpenH = SpriteSpec('tiles/door_open_h.png');
-  static const doorClosedV = SpriteSpec('tiles/door_closed_v.png');
-  static const doorClosedH = SpriteSpec('tiles/door_closed_h.png');
-  static const doorLockedV = SpriteSpec('tiles/door_locked_v.png');
-  static const doorLockedH = SpriteSpec('tiles/door_locked_h.png');
-  static const doorBossV = SpriteSpec('tiles/door_boss_v.png');
-  static const doorBossH = SpriteSpec('tiles/door_boss_h.png');
+  // Doors: one sprite per wall side (n/s/e/w match pack top/bottom/right/left).
+  static const doorOpenN = SpriteSpec('tiles/door_open_n.png');
+  static const doorOpenS = SpriteSpec('tiles/door_open_s.png');
+  static const doorOpenE = SpriteSpec('tiles/door_open_e.png');
+  static const doorOpenW = SpriteSpec('tiles/door_open_w.png');
+  static const doorClosedN = SpriteSpec('tiles/door_closed_n.png');
+  static const doorClosedS = SpriteSpec('tiles/door_closed_s.png');
+  static const doorClosedE = SpriteSpec('tiles/door_closed_e.png');
+  static const doorClosedW = SpriteSpec('tiles/door_closed_w.png');
+  static const doorLockedN = SpriteSpec('tiles/door_locked_n.png');
+  static const doorLockedS = SpriteSpec('tiles/door_locked_s.png');
+  static const doorLockedE = SpriteSpec('tiles/door_locked_e.png');
+  static const doorLockedW = SpriteSpec('tiles/door_locked_w.png');
+  static const doorBossN = SpriteSpec('tiles/door_boss_n.png');
+  static const doorBossS = SpriteSpec('tiles/door_boss_s.png');
+  static const doorBossE = SpriteSpec('tiles/door_boss_e.png');
+  static const doorBossW = SpriteSpec('tiles/door_boss_w.png');
 
   // --------------------------------------------------------- monsters
   // Idle strips are 16×17 (1px headroom so the bob-up frame never clips).
@@ -129,14 +137,22 @@ class GameAssets {
         'tiles/pit.png',
         'tiles/trap_small.png',
         'tiles/trap_big.png',
-        'tiles/door_open_v.png',
-        'tiles/door_open_h.png',
-        'tiles/door_closed_v.png',
-        'tiles/door_closed_h.png',
-        'tiles/door_locked_v.png',
-        'tiles/door_locked_h.png',
-        'tiles/door_boss_v.png',
-        'tiles/door_boss_h.png',
+        'tiles/door_open_n.png',
+        'tiles/door_open_s.png',
+        'tiles/door_open_e.png',
+        'tiles/door_open_w.png',
+        'tiles/door_closed_n.png',
+        'tiles/door_closed_s.png',
+        'tiles/door_closed_e.png',
+        'tiles/door_closed_w.png',
+        'tiles/door_locked_n.png',
+        'tiles/door_locked_s.png',
+        'tiles/door_locked_e.png',
+        'tiles/door_locked_w.png',
+        'tiles/door_boss_n.png',
+        'tiles/door_boss_s.png',
+        'tiles/door_boss_e.png',
+        'tiles/door_boss_w.png',
         'monsters/slime.png',
         'monsters/bat.png',
         'monsters/rat.png',

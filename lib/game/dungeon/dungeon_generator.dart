@@ -229,56 +229,40 @@ class DungeonGenerator {
     RoomKind kindB,
   ) {
     final oa = originOf(a);
-    final ob = originOf(b);
     final dx = b.gx - a.gx;
     final dy = b.gy - a.gy;
 
     late Point<int> doorA;
-    late Point<int> doorB;
     late DoorDir dirA;
 
     if (dx == 1 && dy == 0) {
-      // A west of B.
+      // A west of B — shared east wall of A.
       final midY = 1 + interiorH ~/ 2;
       doorA = Point(oa.x + interiorW + 1, oa.y + midY);
-      doorB = Point(ob.x, ob.y + midY);
       dirA = DoorDir.east;
     } else if (dx == -1 && dy == 0) {
       final midY = 1 + interiorH ~/ 2;
       doorA = Point(oa.x, oa.y + midY);
-      doorB = Point(ob.x + interiorW + 1, ob.y + midY);
       dirA = DoorDir.west;
     } else if (dy == 1 && dx == 0) {
       final midX = 1 + interiorW ~/ 2;
       doorA = Point(oa.x + midX, oa.y + interiorH + 1);
-      doorB = Point(ob.x + midX, ob.y);
       dirA = DoorDir.south;
     } else if (dy == -1 && dx == 0) {
       final midX = 1 + interiorW ~/ 2;
       doorA = Point(oa.x + midX, oa.y);
-      doorB = Point(ob.x + midX, ob.y + interiorH + 1);
       dirA = DoorDir.north;
     } else {
       return;
     }
 
-    // Carve openings (and a 1-tile thick shared wall becomes floor).
+    // Shared wall cell becomes the doorway; directional door tile sits here.
     map.setTile(doorA.x, doorA.y, TileType.floor);
-    map.setTile(doorB.x, doorB.y, TileType.floor);
-    // Widen door to 2 tiles for comfort.
-    if (dirA == DoorDir.east || dirA == DoorDir.west) {
-      map.setTile(doorA.x, doorA.y + 1, TileType.floor);
-      map.setTile(doorB.x, doorB.y + 1, TileType.floor);
-    } else {
-      map.setTile(doorA.x + 1, doorA.y, TileType.floor);
-      map.setTile(doorB.x + 1, doorB.y, TileType.floor);
-    }
 
     final toBoss = kindA == RoomKind.boss || kindB == RoomKind.boss;
     final fromStart = kindA == RoomKind.start || kindB == RoomKind.start;
     final locked = !toBoss && !fromStart && _rng.nextDouble() < 0.35;
 
-    // One door component per opening (on A's side).
     map.doorSpawns.add(DoorSpawn(
       pos: doorA,
       dir: dirA,
@@ -391,15 +375,16 @@ class DungeonGenerator {
       }
     }
 
-    // Chests: treasure room always, plus some combat rooms.
+    // Chests: always on a tile reachable from the room center (and thus
+    // from the door approaches). Prefer the far side of treasure rooms.
     for (final info in infos) {
       if (info.kind == RoomKind.treasure) {
-        final p = randomSpotIn(info.bounds);
-        if (p != null) map.chestSpawns.add(p);
-        final p2 = randomSpotIn(info.bounds);
-        if (p2 != null) map.chestSpawns.add(p2);
+        final a = _placeReachableChest(map, info.bounds, used, preferFar: true);
+        if (a != null) map.chestSpawns.add(a);
+        final b = _placeReachableChest(map, info.bounds, used, preferFar: true);
+        if (b != null) map.chestSpawns.add(b);
       } else if (info.kind == RoomKind.combat && _rng.nextDouble() < 0.35) {
-        final p = randomSpotIn(info.bounds);
+        final p = _placeReachableChest(map, info.bounds, used);
         if (p != null) map.chestSpawns.add(p);
       }
     }
@@ -437,6 +422,96 @@ class DungeonGenerator {
 
   Point<int> _center(Rectangle<int> r) =>
       Point(r.left + r.width ~/ 2, r.top + r.height ~/ 2);
+
+  /// Picks a walkable chest spot reachable from the room center. If needed,
+  /// carves a short floor path so the chest is never stranded on an island.
+  Point<int>? _placeReachableChest(
+    DungeonMap map,
+    Rectangle<int> room,
+    Set<Point<int>> used, {
+    bool preferFar = false,
+  }) {
+    final center = _center(room);
+    // Ensure the center itself is floor (layouts may have trapped it).
+    if (!map.isWalkable(center.x, center.y)) {
+      map.setTile(center.x, center.y, TileType.floor);
+    }
+
+    final candidates = <Point<int>>[];
+    for (var y = room.top + 1; y < room.top + room.height - 1; y++) {
+      for (var x = room.left + 1; x < room.left + room.width - 1; x++) {
+        final p = Point(x, y);
+        if (used.contains(p)) continue;
+        if (!map.isWalkable(x, y) && map.tileAt(x, y) != TileType.pit) {
+          continue;
+        }
+        candidates.add(p);
+      }
+    }
+    if (candidates.isEmpty) return null;
+
+    if (preferFar) {
+      candidates.sort(
+        (a, b) => b.distanceTo(center).compareTo(a.distanceTo(center)),
+      );
+    } else {
+      candidates.shuffle(_rng);
+    }
+
+    for (final p in candidates.take(24)) {
+      // Clear the destination and a Manhattan path from center → chest.
+      _carvePath(map, center, p);
+      if (_reachable(map, center, p)) {
+        map.setTile(p.x, p.y, TileType.floor);
+        used.add(p);
+        return p;
+      }
+    }
+    return null;
+  }
+
+  void _carvePath(DungeonMap map, Point<int> from, Point<int> to) {
+    var x = from.x;
+    var y = from.y;
+    while (x != to.x) {
+      x += (to.x - x).sign;
+      final t = map.tileAt(x, y);
+      if (t == TileType.pit || map.isTrap(x, y) || t == TileType.empty) {
+        map.setTile(x, y, TileType.floor);
+      }
+    }
+    while (y != to.y) {
+      y += (to.y - y).sign;
+      final t = map.tileAt(x, y);
+      if (t == TileType.pit || map.isTrap(x, y) || t == TileType.empty) {
+        map.setTile(x, y, TileType.floor);
+      }
+    }
+  }
+
+  bool _reachable(DungeonMap map, Point<int> from, Point<int> to) {
+    if (!map.isWalkable(from.x, from.y) || !map.isWalkable(to.x, to.y)) {
+      return false;
+    }
+    final seen = <Point<int>>{from};
+    final q = <Point<int>>[from];
+    while (q.isNotEmpty) {
+      final p = q.removeAt(0);
+      if (p == to) return true;
+      for (final d in const [
+        Point(1, 0),
+        Point(-1, 0),
+        Point(0, 1),
+        Point(0, -1),
+      ]) {
+        final n = Point(p.x + d.x, p.y + d.y);
+        if (seen.contains(n) || !map.isWalkable(n.x, n.y)) continue;
+        seen.add(n);
+        q.add(n);
+      }
+    }
+    return false;
+  }
 }
 
 class _GraphNode {
