@@ -6,7 +6,6 @@ import '../theme.dart';
 import '../widgets/pixel_sprite.dart';
 import '../widgets/pixel_widgets.dart';
 import 'character_select_screen.dart';
-import 'store_screen.dart';
 
 class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key});
@@ -96,13 +95,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     color: PixelColors.red,
                     fontSize: 14,
                     onPressed: () => _open(const CharacterSelectScreen()),
-                  ),
-                  const SizedBox(height: 12),
-                  PixelButton(
-                    label: 'NEGOZIO',
-                    color: PixelColors.surfaceLight,
-                    fontSize: 12,
-                    onPressed: () => _open(const StoreScreen()),
                   ),
                   const SizedBox(height: 24),
                   PixelPanel(

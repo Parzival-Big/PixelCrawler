@@ -14,7 +14,7 @@ Esplora un dungeon infinito generato proceduralmente, sconfiggi i mostri, raccog
 | **Rogue** | Mischia | Velocissimo, colpi critici |
 | **Slime** | Mischia | 🔒 Si sblocca raggiungendo il **piano 20** con **Knight, Mage, Hunter e Rogue** (ciascuno) |
 
-Lo sblocco dello Slime (e i record) sono salvati in locale sul dispositivo. Le monete raccolte durante le run finiscono nel **negozio** del menu principale, dove si comprano potenziamenti permanenti (vita, danno, velocità, raffica).
+Lo sblocco dello Slime (e i record) sono salvati in locale sul dispositivo. Tra un piano e l’altro appare un **mercante temporaneo**: le monete della run si spendono lì per potenziamenti (cura, vita, danno, velocità, raffica) che valgono **solo fino alla fine della run**.
 
 ## Controlli
 

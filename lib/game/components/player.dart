@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:flame/components.dart';
 
-import '../../services/save_service.dart';
 import '../heroes.dart';
+import '../store_catalog.dart';
 import 'attacks.dart';
 import 'game_character.dart';
 import 'monster.dart';
@@ -12,7 +12,7 @@ class Player extends GameCharacter {
   Player({required this.def, required super.position})
       : super(
           frameSize: def.anim.size,
-          maxHp: def.maxHp + SessionBonus.extraHp + SessionBonus.permanentHp,
+          maxHp: def.maxHp + SessionBonus.extraHp,
         );
 
   final HeroDef def;
@@ -24,10 +24,10 @@ class Player extends GameCharacter {
 
   static const aimRange = 130.0;
 
-  double get moveSpeed => def.speed + SessionBonus.permanentSpeed;
+  double get moveSpeed => def.speed + SessionBonus.extraSpeed;
 
   double get attackCooldown =>
-      (def.attackCooldown - SessionBonus.permanentCooldown).clamp(0.15, 2.0);
+      (def.attackCooldown - SessionBonus.extraCooldown).clamp(0.15, 2.0);
 
   @override
   Future<void> onLoad() async {
@@ -75,7 +75,7 @@ class Player extends GameCharacter {
     }
     faceDirection(dir.x);
 
-    var dmg = def.damage + SessionBonus.permanentDamage;
+    var dmg = def.damage + SessionBonus.extraDamage;
     if (def.critChance > 0 && _rng.nextDouble() < def.critChance) {
       dmg *= 2;
     }
@@ -120,22 +120,25 @@ class Player extends GameCharacter {
   }
 }
 
-/// Bonuses active for the current run.
-///
-/// [extraHp] grows mid-run from blue potions; the permanent fields are
-/// loaded from the merchant once at the start of the run.
+/// Bonuses active for the current run only (shop + blue potions).
 class SessionBonus {
   static int extraHp = 0;
-  static int permanentHp = 0;
-  static int permanentDamage = 0;
-  static double permanentSpeed = 0;
-  static double permanentCooldown = 0;
+  static int extraDamage = 0;
+  static double extraSpeed = 0;
+  static double extraCooldown = 0;
+  static final levels = <String, int>{};
 
-  static void resetFromSave(SaveService save) {
+  static void reset() {
     extraHp = 0;
-    permanentHp = save.bonusMaxHp;
-    permanentDamage = save.bonusDamage;
-    permanentSpeed = save.bonusSpeed;
-    permanentCooldown = save.bonusAttackCooldown;
+    extraDamage = 0;
+    extraSpeed = 0;
+    extraCooldown = 0;
+    levels.clear();
+  }
+
+  static int levelOf(StoreUpgrade upgrade) => levels[upgrade.id] ?? 0;
+
+  static void bumpLevel(StoreUpgrade upgrade) {
+    levels[upgrade.id] = levelOf(upgrade) + 1;
   }
 }

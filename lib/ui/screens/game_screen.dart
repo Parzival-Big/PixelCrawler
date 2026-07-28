@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../game/heroes.dart';
 import '../../game/pixel_crawler_game.dart';
+import '../overlays/shop_overlay.dart';
 import '../theme.dart';
 import '../widgets/pixel_widgets.dart';
 
@@ -50,6 +51,7 @@ class _GameScreenState extends State<GameScreen> {
                 onQuit: _quitToMenu,
               ),
           Overlays.unlock: (context, game) => _UnlockToast(game: game),
+          Overlays.shop: (context, game) => ShopOverlay(game: game),
         },
       ),
     );

@@ -2,9 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/heroes.dart';
-import '../game/store_catalog.dart';
 
-/// Persistent progression: unlocks, banked coins and permanent upgrades.
+/// Persistent progression: unlocks and lifetime records.
 class SaveService {
   SaveService._(this._prefs);
 
@@ -75,33 +74,4 @@ class SaveService {
       await _prefs.setInt(_kTotalKills, totalKills + kills);
     }
   }
-
-  // -------------------------------------------------------------- store
-
-  int upgradeLevel(StoreUpgrade upgrade) =>
-      _prefs.getInt('upgrade_${upgrade.id}') ?? 0;
-
-  /// Spends banked coins. Returns false if the purchase is not affordable
-  /// or the upgrade is already maxed.
-  Future<bool> buyUpgrade(StoreUpgrade upgrade) async {
-    final level = upgradeLevel(upgrade);
-    if (level >= upgrade.maxLevel) return false;
-    final cost = upgrade.costForLevel(level);
-    if (totalCoins < cost) return false;
-    await _prefs.setInt(_kTotalCoins, totalCoins - cost);
-    await _prefs.setInt('upgrade_${upgrade.id}', level + 1);
-    return true;
-  }
-
-  /// Permanent bonuses applied to every run.
-  int get bonusMaxHp =>
-      upgradeLevel(StoreCatalog.maxHp) * StoreCatalog.maxHp.perLevel;
-  int get bonusDamage =>
-      upgradeLevel(StoreCatalog.damage) * StoreCatalog.damage.perLevel;
-  double get bonusSpeed =>
-      upgradeLevel(StoreCatalog.speed) * StoreCatalog.speed.perLevel.toDouble();
-  double get bonusAttackCooldown =>
-      upgradeLevel(StoreCatalog.attackSpeed) *
-      StoreCatalog.attackSpeed.perLevel /
-      100.0;
 }

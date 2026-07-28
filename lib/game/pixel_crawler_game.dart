@@ -21,6 +21,7 @@ import 'dungeon/dungeon_generator.dart';
 import 'dungeon/dungeon_map.dart';
 import 'heroes.dart';
 import 'monsters.dart';
+import 'store_catalog.dart';
 
 /// Names of the Flutter overlays registered on the GameWidget.
 class Overlays {
@@ -28,6 +29,7 @@ class Overlays {
   static const pause = 'pause';
   static const gameOver = 'gameOver';
   static const unlock = 'unlock';
+  static const shop = 'shop';
 }
 
 class PixelCrawlerGame extends FlameGame with KeyboardEvents {
@@ -35,7 +37,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       : super(
           camera: CameraComponent.withFixedResolution(width: 384, height: 216),
         ) {
-    SessionBonus.resetFromSave(SaveService.instance);
+    SessionBonus.reset();
   }
 
   final HeroType heroType;
@@ -106,10 +108,9 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     camera.viewport.addAll([_joystick, attackButton]);
 
     final def = heroes[heroType]!;
-    final startHp = def.maxHp + SessionBonus.permanentHp;
     player = Player(def: def, position: Vector2.zero());
-    hpNotifier.value = startHp;
-    maxHpNotifier.value = startHp;
+    hpNotifier.value = def.maxHp;
+    maxHpNotifier.value = def.maxHp;
 
     await _loadFloor();
   }
@@ -248,11 +249,43 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     coinsNotifier.value = coins;
   }
 
+  bool spendCoins(int amount) {
+    if (coins < amount) return false;
+    coins -= amount;
+    coinsNotifier.value = coins;
+    return true;
+  }
+
   void raiseMaxHp(int amount) {
     final p = player!;
     p.maxHp += amount;
     p.heal(amount);
     maxHpNotifier.value = p.maxHp;
+  }
+
+  /// Applies a between-floor shop purchase using run coins.
+  /// Returns false if unaffordable or already maxed.
+  bool buyShopUpgrade(StoreUpgrade upgrade) {
+    final level = SessionBonus.levelOf(upgrade);
+    if (level >= upgrade.maxLevel) return false;
+    final cost = upgrade.costForLevel(level);
+    if (!spendCoins(cost)) return false;
+
+    SessionBonus.bumpLevel(upgrade);
+    switch (upgrade.unit) {
+      case StoreUnit.heal:
+        player?.heal(upgrade.perLevel);
+      case StoreUnit.halfHearts:
+        SessionBonus.extraHp += upgrade.perLevel;
+        raiseMaxHp(upgrade.perLevel);
+      case StoreUnit.damage:
+        SessionBonus.extraDamage += upgrade.perLevel;
+      case StoreUnit.speed:
+        SessionBonus.extraSpeed += upgrade.perLevel;
+      case StoreUnit.cooldownHundredths:
+        SessionBonus.extraCooldown += upgrade.perLevel / 100.0;
+    }
+    return true;
   }
 
   void onMonsterKilled() => kills++;
@@ -266,10 +299,26 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     floorNotifier.value = floor;
     final justUnlocked =
         await SaveService.instance.reportFloorReached(floor, heroType);
-    if (justUnlocked) {
+    if (justUnlocked && overlays.registeredOverlays.contains(Overlays.unlock)) {
       overlays.add(Overlays.unlock);
     }
+    // Between floors: pause and open the temporary merchant.
+    pauseEngine();
+    if (overlays.registeredOverlays.contains(Overlays.shop)) {
+      overlays.add(Overlays.shop);
+    } else {
+      // Unit tests without GameWidget: skip UI and enter the floor directly.
+      await finishShopAndEnterFloor();
+    }
+  }
+
+  /// Called by the shop overlay when the player is done shopping.
+  Future<void> finishShopAndEnterFloor() async {
+    if (overlays.isActive(Overlays.shop)) {
+      overlays.remove(Overlays.shop);
+    }
     await _loadFloor();
+    resumeEngine();
   }
 
   Future<void> onPlayerDied() async {
@@ -286,6 +335,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void togglePause() {
+    if (overlays.isActive(Overlays.shop)) return;
     if (overlays.isActive(Overlays.pause)) {
       overlays.remove(Overlays.pause);
       resumeEngine();
