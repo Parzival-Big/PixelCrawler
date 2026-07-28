@@ -65,75 +65,81 @@ void main() {
   });
 
   testWithGame<PixelCrawlerGame>(
-    'camera zoom and HUD adapt when the canvas is resized (fold/unfold)',
+    'camera zoom fits a single room on screen',
     () => PixelCrawlerGame(heroType: HeroType.knight),
     (game) async {
       game.update(0);
+      expect(PixelCrawlerGame.roomWorldWidth, 240);
+      expect(PixelCrawlerGame.roomWorldHeight, 176);
 
-      game.onGameResize(Vector2(384, 216));
+      // Exact room aspect → zoom 1.
+      game.onGameResize(Vector2(
+        PixelCrawlerGame.roomWorldWidth,
+        PixelCrawlerGame.roomWorldHeight,
+      ));
       expect(game.camera.viewfinder.zoom, closeTo(1.0, 0.01));
 
-      // Unfolded / tablet: taller canvas → higher zoom, more horizontal view
-      // stays readable.
-      game.onGameResize(Vector2(900, 432));
+      // Double size, same aspect.
+      game.onGameResize(Vector2(
+        PixelCrawlerGame.roomWorldWidth * 2,
+        PixelCrawlerGame.roomWorldHeight * 2,
+      ));
       expect(game.camera.viewfinder.zoom, closeTo(2.0, 0.01));
 
-      // Folded portrait-like window.
+      // Tall phone: limited by width.
       game.onGameResize(Vector2(300, 600));
-      expect(game.camera.viewfinder.zoom, closeTo(600 / 216, 0.01));
+      expect(
+        game.camera.viewfinder.zoom,
+        closeTo(300 / PixelCrawlerGame.roomWorldWidth, 0.01),
+      );
 
-      // Still playable after several resizes.
       expect(game.player!.isMounted, isTrue);
-      for (var i = 0; i < 30; i++) {
-        game.update(1 / 60);
-      }
+      expect(game.currentRoom, isNotNull);
+      expect(game.discoveredRooms, isNotEmpty);
     },
   );
 
   testWithGame<PixelCrawlerGame>(
-    'camera stays locked on the player after movement and resize',
+    'camera stays locked on the current room after movement and resize',
     () => PixelCrawlerGame(heroType: HeroType.knight),
     (game) async {
       game.update(0);
       game.onGameResize(Vector2(800, 400));
 
       final player = game.player!;
-      // Move around the room — the player must remain on screen.
-      for (var i = 0; i < 120; i++) {
-        player.moveAndCollide(Vector2(3, 1.5));
+      final room = game.currentRoom!;
+      final outer = room.outerBounds;
+      final roomCenter = Vector2(
+        (outer.left + outer.width / 2) * 16,
+        (outer.top + outer.height / 2) * 16,
+      );
+
+      for (var i = 0; i < 40; i++) {
+        player.moveAndCollide(Vector2(2, 1));
         game.update(1 / 60);
       }
-      var visible = game.camera.visibleWorldRect;
-      expect(
-        visible.contains(Offset(player.position.x, player.position.y)),
-        isTrue,
-        reason: 'player left the screen while moving',
-      );
-
-      // After a fold/unfold-style resize the player stays on screen.
-      game.onGameResize(Vector2(400, 800));
-      game.update(0);
-      visible = game.camera.visibleWorldRect;
-      expect(
-        visible.contains(Offset(player.position.x, player.position.y)),
-        isTrue,
-        reason: 'player left the screen after resize',
-      );
-
-      // Away from map edges the camera centre matches the player.
-      player.position = Vector2(
-        game.map.width * 8,
-        game.map.height * 8,
-      );
-      game.snapCameraToPlayer();
-      game.update(0);
       expect(
         game.camera.viewfinder.position.x,
-        closeTo(player.position.x, 1.0),
+        closeTo(roomCenter.x, 1.0),
       );
       expect(
         game.camera.viewfinder.position.y,
-        closeTo(player.position.y, 1.0),
+        closeTo(roomCenter.y, 1.0),
+      );
+
+      final visible = game.camera.visibleWorldRect;
+      expect(
+        visible.contains(Offset(player.position.x, player.position.y)),
+        isTrue,
+        reason: 'player left the room view while moving',
+      );
+
+      game.onGameResize(Vector2(400, 800));
+      game.update(0);
+      expect(
+        game.camera.visibleWorldRect
+            .contains(Offset(player.position.x, player.position.y)),
+        isTrue,
       );
     },
   );

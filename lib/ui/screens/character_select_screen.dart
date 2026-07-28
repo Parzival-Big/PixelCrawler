@@ -53,8 +53,6 @@ class CharacterSelectScreen extends StatelessWidget {
                       ),
                   ];
 
-                  // Portrait / folded: vertical list. Wide tablet: wrap grid.
-                  // Phone landscape: horizontal carousel with height-fit cards.
                   if (mq.isPortrait) {
                     return ListView.separated(
                       padding: const EdgeInsets.symmetric(
@@ -119,103 +117,84 @@ class _HeroCard extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       child: SizedBox(
         width: 190,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final content = Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  locked ? '???' : def.name.toUpperCase(),
-                  style: TextStyle(
-                    fontFamily: pixelFont,
-                    fontSize: 12,
-                    color: locked ? PixelColors.textDim : PixelColors.gold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 72,
-                  child: locked
-                      ? const Icon(
-                          Icons.lock,
-                          size: 40,
-                          color: PixelColors.textDim,
-                        )
-                      : PixelSpriteAnimation(spec: def.anim, scale: 4),
-                ),
-                const SizedBox(height: 8),
-                if (locked)
-                  _UnlockProgress(def: def, save: save)
-                else ...[
-                  Text(
-                    def.description,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: pixelFont,
-                      fontSize: 6,
-                      height: 1.6,
+        height: 320,
+        child: Column(
+          children: [
+            Text(
+              locked ? '???' : def.name.toUpperCase(),
+              style: TextStyle(
+                fontFamily: pixelFont,
+                fontSize: 12,
+                color: locked ? PixelColors.textDim : PixelColors.gold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 64,
+              child: locked
+                  ? const Icon(
+                      Icons.lock,
+                      size: 40,
                       color: PixelColors.textDim,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  StatPips(
-                    label: 'VITA',
-                    value: def.hpPips,
-                    color: PixelColors.red,
-                  ),
-                  const SizedBox(height: 3),
-                  StatPips(
-                    label: 'ATK',
-                    value: def.atkPips,
-                    color: PixelColors.gold,
-                  ),
-                  const SizedBox(height: 3),
-                  StatPips(
-                    label: 'VEL',
-                    value: def.spdPips,
-                    color: PixelColors.green,
-                  ),
-                  if (!def.unlockable) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'MAX P${save.bestFloorFor(def.type)}',
-                      style: const TextStyle(
-                        fontFamily: pixelFont,
-                        fontSize: 6,
-                        color: PixelColors.textDim,
+                    )
+                  : PixelSpriteAnimation(spec: def.anim, scale: 4),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: SingleChildScrollView(
+                child: locked
+                    ? _UnlockProgress(def: def, save: save)
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            def.description,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: pixelFont,
+                              fontSize: 6,
+                              height: 1.6,
+                              color: PixelColors.textDim,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          StatPips(
+                            label: 'VITA',
+                            value: def.hpPips,
+                            color: PixelColors.red,
+                          ),
+                          const SizedBox(height: 3),
+                          StatPips(
+                            label: 'ATK',
+                            value: def.atkPips,
+                            color: PixelColors.gold,
+                          ),
+                          const SizedBox(height: 3),
+                          StatPips(
+                            label: 'VEL',
+                            value: def.spdPips,
+                            color: PixelColors.green,
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ],
-                const SizedBox(height: 10),
-                PixelButton(
-                  label: locked ? 'BLOCCATO' : 'GIOCA',
-                  enabled: !locked,
-                  color: locked ? PixelColors.surface : PixelColors.green,
-                  textColor: locked ? PixelColors.textDim : PixelColors.bg,
-                  fontSize: 9,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => GameScreen(heroType: def.type),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            );
-
-            // Fit card content into the available height (avoids BOTTOM OVERFLOW).
-            if (constraints.maxHeight.isFinite && constraints.maxHeight > 0) {
-              return FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.center,
-                child: SizedBox(width: 170, child: content),
-              );
-            }
-            return content;
-          },
+              ),
+            ),
+            const SizedBox(height: 10),
+            PixelButton(
+              label: locked ? 'BLOCCATO' : 'GIOCA',
+              enabled: !locked,
+              color: locked ? PixelColors.surface : PixelColors.green,
+              textColor: locked ? PixelColors.textDim : PixelColors.bg,
+              fontSize: 9,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => GameScreen(heroType: def.type),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

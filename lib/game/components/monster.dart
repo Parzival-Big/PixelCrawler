@@ -26,6 +26,9 @@ class Monster extends GameCharacter {
 
   bool isBoss = false;
 
+  @override
+  bool get blockedByDoors => true;
+
   double _contactTimer = 0;
   double _wanderTimer = 0;
   double _erraticPhase = 0;

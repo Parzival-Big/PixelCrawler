@@ -43,12 +43,20 @@ abstract class GameCharacter extends SpriteAnimationComponent
       (cx - hw, cy),
       (cx + hw, cy),
     ]) {
-      if (!game.map.isWalkable(p.$1 ~/ tileSize, p.$2 ~/ tileSize)) {
+      final tx = p.$1 ~/ tileSize;
+      final ty = p.$2 ~/ tileSize;
+      if (!game.map.isWalkable(tx, ty)) {
+        return false;
+      }
+      if (blockedByDoors && game.map.isDoorTile(tx, ty)) {
         return false;
       }
     }
     return !game.solidBlocksFeet(cx, cy, feetWidth, feetHeight);
   }
+
+  /// When true, door tiles are impassable (monsters never cross doors).
+  bool get blockedByDoors => false;
 
   /// Axis-separated movement against the tile grid; returns the applied delta.
   Vector2 moveAndCollide(Vector2 delta) {

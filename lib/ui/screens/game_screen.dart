@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../game/heroes.dart';
 import '../../game/pixel_crawler_game.dart';
 import '../adaptive.dart';
+import '../overlays/minimap_overlay.dart';
 import '../overlays/shop_overlay.dart';
 import '../theme.dart';
 import '../widgets/pixel_widgets.dart';
@@ -163,6 +164,13 @@ class _Hud extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 44, right: 10),
+              child: MiniMapOverlay(game: game),
             ),
           ),
           Align(
