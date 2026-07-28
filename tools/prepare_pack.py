@@ -108,6 +108,9 @@ def objects():
         save(raw("objects", f"{decor}.png"), "objects", f"{decor}.png")
     save(raw("objects", "skull_left.png"), "objects", "skull.png")
     save(raw("objects", "bone_right.png"), "objects", "bone.png")
+    save(raw("objects", "sword.png"), "objects", "sword.png")
+    save(raw("objects", "boot.png"), "objects", "boot.png")
+    save(raw("objects", "shield.png"), "objects", "shield.png")
 
 
 # ------------------------------------------------------------- monsters

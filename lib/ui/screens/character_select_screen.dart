@@ -71,6 +71,7 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final save = SaveService.instance;
     return PixelPanel(
       padding: const EdgeInsets.all(14),
       child: SizedBox(
@@ -99,17 +100,7 @@ class _HeroCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             if (locked)
-              Text(
-                'Raggiungi il piano '
-                '${SaveService.slimeUnlockFloor}\nper sbloccare',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: pixelFont,
-                  fontSize: 7,
-                  height: 1.8,
-                  color: PixelColors.textDim,
-                ),
-              )
+              _SlimeUnlockProgress(save: save)
             else ...[
               Text(
                 def.description,
@@ -127,6 +118,18 @@ class _HeroCard extends StatelessWidget {
               StatPips(label: 'ATK', value: def.atkPips, color: PixelColors.gold),
               const SizedBox(height: 4),
               StatPips(label: 'VEL', value: def.spdPips, color: PixelColors.green),
+              if (!def.unlockable) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'MAX P${save.bestFloorFor(def.type)}'
+                  '/${SaveService.slimeUnlockFloor}',
+                  style: const TextStyle(
+                    fontFamily: pixelFont,
+                    fontSize: 6,
+                    color: PixelColors.textDim,
+                  ),
+                ),
+              ],
             ],
             const SizedBox(height: 12),
             PixelButton(
@@ -146,6 +149,50 @@ class _HeroCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SlimeUnlockProgress extends StatelessWidget {
+  const _SlimeUnlockProgress({required this.save});
+
+  final SaveService save;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Text(
+          'Raggiungi il piano '
+          '${SaveService.slimeUnlockFloor}\n'
+          'con TUTTI questi eroi:',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: pixelFont,
+            fontSize: 6,
+            height: 1.8,
+            color: PixelColors.textDim,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final hero in SaveService.slimeUnlockHeroes)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Text(
+              '${heroes[hero]!.name.toUpperCase()}  '
+              '${save.bestFloorFor(hero)}'
+              '/${SaveService.slimeUnlockFloor}'
+              '${save.bestFloorFor(hero) >= SaveService.slimeUnlockFloor ? '  OK' : ''}',
+              style: TextStyle(
+                fontFamily: pixelFont,
+                fontSize: 6,
+                color: save.bestFloorFor(hero) >= SaveService.slimeUnlockFloor
+                    ? PixelColors.gold
+                    : PixelColors.textDim,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
