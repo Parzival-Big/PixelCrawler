@@ -123,11 +123,24 @@ def two_frames(name):
 
 
 def outlined_bob(name):
-    """Use ONLY the dark-outlined sprite (no underscore). Second frame = 1px bob."""
+    """Use ONLY the dark-outlined sprite (no underscore).
+
+    Idle strip is 1px taller than the source so the bob-up frame never
+    clips the top outline (characters often fill the full 16px height).
+    """
     base = raw("monsters", f"{name}.png")
-    bobbed = Image.new("RGBA", base.size, (0, 0, 0, 0))
-    bobbed.paste(base, (0, -1), base)
-    return strip([base, bobbed])
+    return bob_strip(base)
+
+
+def bob_strip(base):
+    """Two-frame idle: rest (1px top pad) → bob up into that pad."""
+    w, h = base.size
+    tall = h + 1
+    idle = Image.new("RGBA", (w, tall), (0, 0, 0, 0))
+    idle.paste(base, (0, 1), base)
+    bobbed = Image.new("RGBA", (w, tall), (0, 0, 0, 0))
+    bobbed.paste(base, (0, 0), base)
+    return strip([idle, bobbed])
 
 
 def monsters():
@@ -149,20 +162,17 @@ def heroes():
         save(outlined_bob(hero), "heroes", f"{hero}.png")
 
     # Unlockable Slime: outlined slime + crown (both frames keep the outline).
-    frames = []
     base = raw("monsters", "slime.png")
-    for dy in (0, -1):
-        img = Image.new("RGBA", base.size, (0, 0, 0, 0))
-        img.paste(base, (0, dy), base)
-        top = _first_opaque_row(img)
-        crown_y = max(0, top - 3)
-        for dx in (5, 8, 11):
-            img.putpixel((dx, crown_y), LIGHT)
-        for x in range(5, 12):
-            img.putpixel((x, crown_y + 1), LIGHT)
-            img.putpixel((x, crown_y + 2), MID)
-        frames.append(img)
-    save(strip(frames), "heroes", "slime_hero.png")
+    crowned = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    crowned.paste(base, (0, 0), base)
+    top = _first_opaque_row(crowned)
+    crown_y = max(0, top - 3)
+    for dx in (5, 8, 11):
+        crowned.putpixel((dx, crown_y), LIGHT)
+    for x in range(5, 12):
+        crowned.putpixel((x, crown_y + 1), LIGHT)
+        crowned.putpixel((x, crown_y + 2), MID)
+    save(bob_strip(crowned), "heroes", "slime_hero.png")
 
 
 def _first_opaque_row(img):

@@ -51,28 +51,29 @@ class GameAssets {
   ];
 
   // --------------------------------------------------------- monsters
-  static const slime = AnimSpec('monsters/slime.png', 16, 16, 2, 0.3);
-  static const bat = AnimSpec('monsters/bat.png', 16, 16, 2, 0.14);
-  static const rat = AnimSpec('monsters/rat.png', 16, 16, 2, 0.18);
-  static const skeleton = AnimSpec('monsters/skeleton.png', 16, 16, 2, 0.25);
+  // Idle strips are 16×17 (1px headroom so the bob-up frame never clips).
+  static const slime = AnimSpec('monsters/slime.png', 16, 17, 2, 0.3);
+  static const bat = AnimSpec('monsters/bat.png', 16, 17, 2, 0.14);
+  static const rat = AnimSpec('monsters/rat.png', 16, 17, 2, 0.18);
+  static const skeleton = AnimSpec('monsters/skeleton.png', 16, 17, 2, 0.25);
   static const skeletonArcher =
-      AnimSpec('monsters/skeleton_archer.png', 16, 16, 2, 0.25);
+      AnimSpec('monsters/skeleton_archer.png', 16, 17, 2, 0.25);
   static const skeletonNecromancer =
-      AnimSpec('monsters/skeleton_necromancer.png', 16, 16, 2, 0.28);
-  static const spider = AnimSpec('monsters/spider.png', 16, 16, 2, 0.16);
-  static const ghost = AnimSpec('monsters/ghost.png', 16, 16, 2, 0.3);
-  static const flyingEye = AnimSpec('monsters/flying_eye.png', 16, 16, 2, 0.14);
+      AnimSpec('monsters/skeleton_necromancer.png', 16, 17, 2, 0.28);
+  static const spider = AnimSpec('monsters/spider.png', 16, 17, 2, 0.16);
+  static const ghost = AnimSpec('monsters/ghost.png', 16, 17, 2, 0.3);
+  static const flyingEye = AnimSpec('monsters/flying_eye.png', 16, 17, 2, 0.14);
 
   // ----------------------------------------------------------- heroes
-  static const knight = AnimSpec('heroes/knight.png', 16, 16, 2, 0.25);
-  static const mage = AnimSpec('heroes/mage.png', 16, 16, 2, 0.25);
-  static const hunter = AnimSpec('heroes/hunter.png', 16, 16, 2, 0.25);
-  static const rogue = AnimSpec('heroes/rogue.png', 16, 16, 2, 0.25);
-  static const slimeHero = AnimSpec('heroes/slime_hero.png', 16, 16, 2, 0.3);
-  static const mummy = AnimSpec('heroes/mummy.png', 16, 16, 2, 0.28);
-  static const mushroom = AnimSpec('heroes/mushroom.png', 16, 16, 2, 0.26);
-  static const witch = AnimSpec('heroes/witch.png', 16, 16, 2, 0.25);
-  static const dragon = AnimSpec('heroes/dragon.png', 16, 16, 2, 0.22);
+  static const knight = AnimSpec('heroes/knight.png', 16, 17, 2, 0.25);
+  static const mage = AnimSpec('heroes/mage.png', 16, 17, 2, 0.25);
+  static const hunter = AnimSpec('heroes/hunter.png', 16, 17, 2, 0.25);
+  static const rogue = AnimSpec('heroes/rogue.png', 16, 17, 2, 0.25);
+  static const slimeHero = AnimSpec('heroes/slime_hero.png', 16, 17, 2, 0.3);
+  static const mummy = AnimSpec('heroes/mummy.png', 16, 17, 2, 0.28);
+  static const mushroom = AnimSpec('heroes/mushroom.png', 16, 17, 2, 0.26);
+  static const witch = AnimSpec('heroes/witch.png', 16, 17, 2, 0.25);
+  static const dragon = AnimSpec('heroes/dragon.png', 16, 17, 2, 0.22);
 
   // Bomb: idle + lit fuse (2 frames).
   static const bomb = AnimSpec('objects/bomb.png', 16, 16, 2, 0.2);
