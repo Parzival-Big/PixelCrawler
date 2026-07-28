@@ -40,4 +40,15 @@ class DungeonMap {
     final t = tileAt(x, y);
     return t == TileType.floor || t == TileType.stairs;
   }
+
+  /// Room containing tile ([tx], [ty]), or null if outside every room.
+  Rectangle<int>? roomContaining(int tx, int ty) {
+    for (final r in rooms) {
+      if (tx >= r.left && tx < r.left + r.width &&
+          ty >= r.top && ty < r.top + r.height) {
+        return r;
+      }
+    }
+    return null;
+  }
 }

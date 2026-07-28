@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 
 import '../monsters.dart';
+import 'attacks.dart';
 import 'game_character.dart';
 import 'pickups.dart';
 
@@ -25,12 +26,14 @@ class Monster extends GameCharacter {
   double _contactTimer = 0;
   double _wanderTimer = 0;
   double _erraticPhase = 0;
+  double _shotTimer = 0;
   Vector2 _wanderDir = Vector2.zero();
 
   @override
   Future<void> onLoad() async {
     animation = def.anim.animation();
     _erraticPhase = _rng.nextDouble() * pi * 2;
+    _shotTimer = _rng.nextDouble() * def.projectileCooldown;
   }
 
   @override
@@ -40,12 +43,29 @@ class Monster extends GameCharacter {
     if (player == null || isDead || player.isDead) return;
 
     _contactTimer -= dt;
+    _shotTimer -= dt;
     final toPlayer = player.position - position;
     final dist = toPlayer.length;
 
     Vector2 move;
     if (dist < def.aggroRange) {
-      move = toPlayer.normalized();
+      final dir = toPlayer.normalized();
+      if (def.ranged) {
+        // Keep preferred distance: close in if too far, back off if too close.
+        if (dist > def.preferredRange + 12) {
+          move = dir;
+        } else if (dist < def.preferredRange - 12) {
+          move = -dir;
+        } else {
+          move = Vector2(-dir.y, dir.x) * (_rng.nextBool() ? 1 : -1) * 0.35;
+        }
+        if (_shotTimer <= 0 && dist < def.aggroRange) {
+          _shotTimer = def.projectileCooldown;
+          _fireAt(dir);
+        }
+      } else {
+        move = dir;
+      }
       if (def.erratic) {
         _erraticPhase += dt * 6;
         final side = Vector2(-move.y, move.x)..scale(sin(_erraticPhase) * 0.7);
@@ -71,6 +91,31 @@ class Monster extends GameCharacter {
     if (dist < 11 && _contactTimer <= 0) {
       _contactTimer = 0.8;
       player.receiveContactDamage(def.damage);
+    }
+  }
+
+  void _fireAt(Vector2 dir) {
+    final origin = position - Vector2(0, size.y / 2);
+    switch (def.type) {
+      case MonsterType.skeletonNecromancer:
+        game.world.add(EnemyProjectile.bolt(
+          origin: origin,
+          direction: dir,
+          damage: def.damage,
+        ));
+      case MonsterType.skeletonArcher:
+      case MonsterType.flyingEye:
+        game.world.add(EnemyProjectile.arrow(
+          origin: origin,
+          direction: dir,
+          damage: def.damage,
+        ));
+      default:
+        game.world.add(EnemyProjectile.arrow(
+          origin: origin,
+          direction: dir,
+          damage: def.damage,
+        ));
     }
   }
 

@@ -1,6 +1,23 @@
 import '../config/game_assets.dart';
 
-enum MonsterType { slime, bat, rat, skeleton, spider, ghost }
+enum MonsterType {
+  slime,
+  bat,
+  rat,
+  skeleton,
+  skeletonArcher,
+  skeletonNecromancer,
+  spider,
+  ghost,
+  flyingEye,
+}
+
+/// Skeleton variants that bone piles / skulls can transmute into.
+const skeletonVariants = <MonsterType>[
+  MonsterType.skeleton,
+  MonsterType.skeletonArcher,
+  MonsterType.skeletonNecromancer,
+];
 
 class MonsterDef {
   const MonsterDef({
@@ -13,6 +30,9 @@ class MonsterDef {
     required this.aggroRange,
     required this.coinDrop,
     this.erratic = false,
+    this.ranged = false,
+    this.preferredRange = 70,
+    this.projectileCooldown = 1.4,
   });
 
   final MonsterType type;
@@ -26,6 +46,11 @@ class MonsterDef {
 
   /// Erratic movers (bats, ghosts) wobble sideways while chasing.
   final bool erratic;
+
+  /// Keeps distance and shoots projectiles at the player.
+  final bool ranged;
+  final double preferredRange;
+  final double projectileCooldown;
 }
 
 const monsters = <MonsterType, MonsterDef>{
@@ -70,6 +95,32 @@ const monsters = <MonsterType, MonsterDef>{
     aggroRange: 110,
     coinDrop: 2,
   ),
+  MonsterType.skeletonArcher: MonsterDef(
+    type: MonsterType.skeletonArcher,
+    anim: GameAssets.skeletonArcher,
+    baseHp: 5,
+    hpPerFloor: 1,
+    damage: 2,
+    speed: 34,
+    aggroRange: 150,
+    coinDrop: 2,
+    ranged: true,
+    preferredRange: 80,
+    projectileCooldown: 1.35,
+  ),
+  MonsterType.skeletonNecromancer: MonsterDef(
+    type: MonsterType.skeletonNecromancer,
+    anim: GameAssets.skeletonNecromancer,
+    baseHp: 7,
+    hpPerFloor: 2,
+    damage: 2,
+    speed: 30,
+    aggroRange: 160,
+    coinDrop: 3,
+    ranged: true,
+    preferredRange: 90,
+    projectileCooldown: 1.6,
+  ),
   MonsterType.spider: MonsterDef(
     type: MonsterType.spider,
     anim: GameAssets.spider,
@@ -91,6 +142,20 @@ const monsters = <MonsterType, MonsterDef>{
     coinDrop: 3,
     erratic: true,
   ),
+  MonsterType.flyingEye: MonsterDef(
+    type: MonsterType.flyingEye,
+    anim: GameAssets.flyingEye,
+    baseHp: 4,
+    hpPerFloor: 1,
+    damage: 1,
+    speed: 48,
+    aggroRange: 140,
+    coinDrop: 2,
+    erratic: true,
+    ranged: true,
+    preferredRange: 75,
+    projectileCooldown: 1.2,
+  ),
 };
 
 /// Which monsters can appear on a given floor (weighted picks).
@@ -106,8 +171,18 @@ List<MonsterType> spawnPoolForFloor(int floor) {
   if (floor >= 3) {
     pool.addAll([MonsterType.skeleton, MonsterType.spider]);
   }
+  if (floor >= 4) {
+    pool.addAll([MonsterType.skeletonArcher, MonsterType.flyingEye]);
+  }
   if (floor >= 5) {
     pool.addAll([MonsterType.ghost, MonsterType.skeleton]);
+  }
+  if (floor >= 7) {
+    pool.addAll([
+      MonsterType.skeletonNecromancer,
+      MonsterType.skeletonArcher,
+      MonsterType.flyingEye,
+    ]);
   }
   return pool;
 }

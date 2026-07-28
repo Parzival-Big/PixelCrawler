@@ -20,8 +20,13 @@ void main() {
     await SaveService.load();
   });
 
-  test('merchant spawn chance is 5%', () {
+  test('merchant spawn chance starts at 5% and rises with pity', () {
     expect(PixelCrawlerGame.shopChance, 0.05);
+    expect(PixelCrawlerGame.shopPityStep, 0.05);
+    final game = PixelCrawlerGame(heroType: HeroType.knight);
+    expect(game.currentShopChance, 0.05);
+    game.floorsWithoutShop = 3;
+    expect(game.currentShopChance, closeTo(0.20, 1e-9));
   });
 
   for (final hero in HeroType.values) {
