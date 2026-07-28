@@ -19,9 +19,12 @@ class DungeonMap {
   final coinSpawns = <Point<int>>[];
   final potionSpawns = <Point<int>>[];
 
-  /// Wall tiles whose south neighbour is floor: they render a brick face
-  /// and can host a torch.
+  /// Wall tiles whose south neighbour is floor: they can host a torch.
   final torchSpawns = <Point<int>>[];
+
+  /// Decorative props (index into GameAssets.decor) and fire pots.
+  final decorSpawns = <(Point<int>, int)>[];
+  final firePotSpawns = <Point<int>>[];
 
   TileType tileAt(int x, int y) {
     if (x < 0 || y < 0 || x >= width || y >= height) return TileType.empty;

@@ -143,7 +143,8 @@ class StairsTrigger extends PositionComponent
   }
 }
 
-/// Decorative animated wall torch.
+/// Animated torch baked into a south-facing wall tile (drawn over the
+/// baked wall).
 class Torch extends SpriteAnimationComponent {
   Torch({required Vector2 position})
       : super(
@@ -155,7 +156,43 @@ class Torch extends SpriteAnimationComponent {
 
   @override
   Future<void> onLoad() async {
-    animation = GameAssets.torch.animation();
+    animation = GameAssets.torchWall.animation();
     animationTicker?.clock = Random().nextDouble();
+  }
+}
+
+/// Standing burning fire pot: a light source placed on the floor,
+/// y-sorted with the other entities.
+class FirePot extends SpriteAnimationComponent {
+  FirePot({required Vector2 position})
+      : super(
+          position: position,
+          size: Vector2.all(16),
+          anchor: Anchor.bottomCenter,
+        );
+
+  @override
+  Future<void> onLoad() async {
+    animation = GameAssets.firePot.animation();
+    animationTicker?.clock = Random().nextDouble();
+    priority = (position.y * 10).round();
+  }
+}
+
+/// Static decorative prop (barrel, crate, bones...), y-sorted.
+class Decor extends SpriteComponent {
+  Decor({required Vector2 position, required this.spec})
+      : super(
+          position: position,
+          size: Vector2.all(16),
+          anchor: Anchor.bottomCenter,
+        );
+
+  final SpriteSpec spec;
+
+  @override
+  Future<void> onLoad() async {
+    sprite = spec.sprite();
+    priority = (position.y * 10).round();
   }
 }

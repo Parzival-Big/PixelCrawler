@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 
-/// Shared palette — matches the sprite placeholder palette so the GUI and
-/// the game world feel like one piece.
+/// Shared palette — derived from the 1-bit asset pack (light #B9DDA7,
+/// mid #68A08A, dark #1E4250) so the GUI and the game world feel like
+/// one piece.
 class PixelColors {
-  static const bg = Color(0xFF14141C);
-  static const surface = Color(0xFF23232F);
-  static const surfaceLight = Color(0xFF2E2E3D);
-  static const border = Color(0xFF6A6A8C);
-  static const borderDark = Color(0xFF3A3A4F);
-  static const text = Color(0xFFE8E8DC);
-  static const textDim = Color(0xFF9C9CB0);
-  static const gold = Color(0xFFF8D848);
-  static const red = Color(0xFFE83C4C);
-  static const green = Color(0xFF5CC85C);
-  static const blue = Color(0xFF4CA8E8);
-  static const purple = Color(0xFF7A4CD8);
+  static const bg = Color(0xFF0E222B);
+  static const surface = Color(0xFF1E4250);
+  static const surfaceLight = Color(0xFF2B5666);
+  static const border = Color(0xFF68A08A);
+  static const borderDark = Color(0xFF15323D);
+  static const text = Color(0xFFB9DDA7);
+  static const textDim = Color(0xFF68A08A);
+  static const gold = Color(0xFFB9DDA7);
+  static const red = Color(0xFFC85A5A);
+  static const green = Color(0xFF68A08A);
+  static const blue = Color(0xFF68A08A);
+  static const purple = Color(0xFF2B5666);
 }
 
 const pixelFont = 'PressStart2P';
