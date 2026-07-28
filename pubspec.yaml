@@ -1,0 +1,35 @@
+name: pixel_crawler
+description: "Un dungeon crawler 2.5D in pixel art per iOS e Android."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flame: ^1.38.0
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flame_test: ^2.3.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/tiles/
+    - assets/images/objects/
+    - assets/images/monsters/
+    - assets/images/heroes/
+    - assets/images/effects/
+    - assets/images/ui/
+
+  fonts:
+    - family: PressStart2P
+      fonts:
+        - asset: assets/fonts/PressStart2P-Regular.ttf
