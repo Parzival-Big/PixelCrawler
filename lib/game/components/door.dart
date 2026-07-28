@@ -50,30 +50,37 @@ class Door extends SpriteComponent
   /// Which way this doorway faces from the room the player is in.
   DoorDir facingForRoom(RoomInfo? room) {
     if (room == null) return spawn.dir;
+    final edge = _edgeOnRoom(room);
+    return edge ?? spawn.dir;
+  }
+
+  /// True when this tile sits on [room]'s outer wall ring.
+  bool isOnPerimeterOf(RoomInfo? room) {
+    if (room == null) return false;
+    return _edgeOnRoom(room) != null;
+  }
+
+  DoorDir? _edgeOnRoom(RoomInfo room) {
     final outer = room.outerBounds;
     final x = spawn.pos.x;
     final y = spawn.pos.y;
     final right = outer.left + outer.width - 1;
     final bottom = outer.top + outer.height - 1;
-    if (y == outer.top && x >= outer.left && x <= right) {
-      return DoorDir.north;
+    if (x < outer.left || x > right || y < outer.top || y > bottom) {
+      return null;
     }
-    if (y == bottom && x >= outer.left && x <= right) {
-      return DoorDir.south;
-    }
-    if (x == outer.left && y >= outer.top && y <= bottom) {
-      return DoorDir.west;
-    }
-    if (x == right && y >= outer.top && y <= bottom) {
-      return DoorDir.east;
-    }
-    return spawn.dir;
+    if (y == outer.top) return DoorDir.north;
+    if (y == bottom) return DoorDir.south;
+    if (x == outer.left) return DoorDir.west;
+    if (x == right) return DoorDir.east;
+    return null;
   }
 
   @override
   Future<void> onLoad() async {
     open = !spawn.locked;
     _displayDir = spawn.dir;
+    opacity = 0;
     _applyVisuals();
   }
 
@@ -119,10 +126,21 @@ class Door extends SpriteComponent
   }
 
   @override
+  void render(Canvas canvas) {
+    if (opacity <= 0) return;
+    super.render(canvas);
+  }
+
+  @override
   void update(double dt) {
     super.update(dt);
 
-    final facing = facingForRoom(game.currentRoom);
+    final room = game.currentRoom;
+    final onPerimeter = isOnPerimeterOf(room);
+    opacity = onPerimeter ? 1 : 0;
+    if (!onPerimeter) return;
+
+    final facing = facingForRoom(room);
     if (facing != _displayDir) {
       _displayDir = facing;
       _applyVisuals();
