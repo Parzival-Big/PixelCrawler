@@ -42,11 +42,12 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     SessionBonus.reset();
   }
 
-  /// World size of one room including the wall ring (BoI single-room view).
+  /// World size of one room including the wall ring (BoI single-room view),
+  /// plus overhang so 1.5× wall sprites fit in frame.
   static const roomWorldWidth =
-      (DungeonGenerator.interiorW + 2) * tileSize; // 15 * 16
+      (DungeonGenerator.interiorW + 2) * tileSize + tileSize * (wallVisualScale - 1);
   static const roomWorldHeight =
-      (DungeonGenerator.interiorH + 2) * tileSize; // 11 * 16
+      (DungeonGenerator.interiorH + 2) * tileSize + tileSize * (wallVisualScale - 1);
 
   /// Used for HUD control scaling; matches the room height.
   static const designHeight = roomWorldHeight;

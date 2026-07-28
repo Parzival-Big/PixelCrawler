@@ -4,6 +4,8 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pixel_crawler/game/components/dungeon_renderer.dart';
+import 'package:pixel_crawler/game/dungeon/dungeon_generator.dart';
 import 'package:pixel_crawler/game/heroes.dart';
 import 'package:pixel_crawler/game/pixel_crawler_game.dart';
 import 'package:pixel_crawler/services/save_service.dart';
@@ -69,8 +71,16 @@ void main() {
     () => PixelCrawlerGame(heroType: HeroType.knight),
     (game) async {
       game.update(0);
-      expect(PixelCrawlerGame.roomWorldWidth, 240);
-      expect(PixelCrawlerGame.roomWorldHeight, 176);
+      expect(
+        PixelCrawlerGame.roomWorldWidth,
+        (DungeonGenerator.interiorW + 2) * tileSize +
+            tileSize * (wallVisualScale - 1),
+      );
+      expect(
+        PixelCrawlerGame.roomWorldHeight,
+        (DungeonGenerator.interiorH + 2) * tileSize +
+            tileSize * (wallVisualScale - 1),
+      );
 
       // Exact room aspect → zoom 1.
       game.onGameResize(Vector2(

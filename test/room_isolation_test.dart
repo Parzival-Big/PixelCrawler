@@ -11,6 +11,7 @@ import 'package:pixel_crawler/game/pixel_crawler_game.dart';
 import 'package:pixel_crawler/services/save_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -67,16 +68,17 @@ void main() {
       final renderer = game.world.children.query<DungeonRenderer>().first;
       game.update(0);
 
-      expect(renderer.position.x, outer.left * tileSize);
-      expect(renderer.position.y, outer.top * tileSize);
-      expect(renderer.size.x, outer.width * tileSize);
-      expect(renderer.size.y, outer.height * tileSize);
+      expect(renderer.position.x, outer.left * tileSize - wallOverhang);
+      expect(renderer.position.y, outer.top * tileSize - wallOverhang);
+      expect(renderer.size.x, outer.width * tileSize + wallOverhang * 2);
+      expect(renderer.size.y, outer.height * tileSize + wallOverhang * 2);
 
-      // Torches outside the current room are hidden.
+      // Torches outside the current room are hidden; in-room ones are 1.5×.
       for (final torch in game.world.children.query<Torch>()) {
         game.update(0);
         final inRoom = tileInCurrentRoom(game, torch.tileX, torch.tileY);
         expect(torch.opacity, inRoom ? 1 : 0);
+        expect(torch.size.x, wallVisualSize);
       }
     },
   );
