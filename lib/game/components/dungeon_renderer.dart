@@ -47,6 +47,12 @@ class DungeonRenderer extends SpriteComponent {
                 aoPaint,
               );
             }
+          case TileType.trapSmall:
+          case TileType.trapBig:
+            // Base floor under traps; animated overlay is a component.
+            floorSheet.frame(0).render(canvas, position: pos, size: sizeVec);
+          case TileType.pit:
+            GameAssets.pit.sprite().render(canvas, position: pos, size: sizeVec);
           case TileType.wall:
             final name = _wallTileName(x, y);
             if (name != null) {

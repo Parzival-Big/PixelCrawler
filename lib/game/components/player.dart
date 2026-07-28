@@ -111,7 +111,9 @@ class Player extends GameCharacter {
   void receiveContactDamage(int amount) {
     if (_invulnTimer > 0 || isDead) return;
     _invulnTimer = 0.7;
-    receiveDamage(amount);
+    final mitigated = (amount - SessionBonus.extraDefense).clamp(0, amount);
+    if (mitigated <= 0) return;
+    receiveDamage(mitigated);
     game.hpNotifier.value = hp;
   }
 
@@ -130,6 +132,7 @@ class Player extends GameCharacter {
 class SessionBonus {
   static int extraHp = 0;
   static int extraDamage = 0;
+  static int extraDefense = 0;
   static double extraSpeed = 0;
   static double extraCooldown = 0;
   static final levels = <String, int>{};
@@ -137,6 +140,7 @@ class SessionBonus {
   static void reset() {
     extraHp = 0;
     extraDamage = 0;
+    extraDefense = 0;
     extraSpeed = 0;
     extraCooldown = 0;
     levels.clear();

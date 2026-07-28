@@ -1,4 +1,4 @@
-import 'dart:math' show Random, min;
+import 'dart:math' show Point, Random, min;
 
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
@@ -12,12 +12,15 @@ import 'package:flutter/widgets.dart' show KeyEventResult, MediaQuery;
 import '../config/game_assets.dart';
 import '../services/save_service.dart';
 import '../ui/adaptive.dart';
+import 'components/door.dart';
 import 'components/dungeon_renderer.dart';
 import 'components/effects.dart';
 import 'components/monster.dart';
 import 'components/pickups.dart';
 import 'components/player.dart';
+import 'components/shop_pedestal.dart';
 import 'components/solid_obstacle.dart';
+import 'components/traps.dart';
 import 'dungeon/dungeon_generator.dart';
 import 'dungeon/dungeon_map.dart';
 import 'heroes.dart';
@@ -52,15 +55,16 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   int floor = 1;
   int coins = 0;
   int kills = 0;
+  int keys = 0;
+  int bossKeys = 0;
 
-  /// Floors since the last merchant visit (pity counter).
+  /// Floors since the last shop room (pity for shop placement).
   int floorsWithoutShop = 0;
 
   /// Heroes unlocked by the most recent floor report (for toast UI).
   Set<HeroType> lastUnlocked = {};
 
-  /// Base merchant chance; rises by [shopPityStep] each missed floor,
-  /// then resets here when the shop appears.
+  /// Base shop-room chance; rises by [shopPityStep] each missed floor.
   static const shopChance = 0.05;
   static const shopPityStep = 0.05;
 
@@ -68,6 +72,8 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   late final maxHpNotifier = ValueNotifier<int>(0);
   late final coinsNotifier = ValueNotifier<int>(0);
   late final floorNotifier = ValueNotifier<int>(1);
+  late final keysNotifier = ValueNotifier<int>(0);
+  late final bossKeysNotifier = ValueNotifier<int>(0);
 
   late JoystickComponent _joystick;
   late HudButtonComponent _attackButton;
@@ -211,9 +217,29 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   Future<void> _loadFloor() async {
     world.removeAll(world.children.toList());
 
-    map = DungeonGenerator(floor: floor).generate();
+    map = DungeonGenerator(
+      floor: floor,
+      shopChance: currentShopChance,
+    ).generate();
+    if (map.hasShopRoom) {
+      floorsWithoutShop = 0;
+    } else {
+      floorsWithoutShop++;
+    }
 
     world.add(DungeonRenderer(map));
+
+    // Spike trap overlays.
+    for (var y = 0; y < map.height; y++) {
+      for (var x = 0; x < map.width; x++) {
+        final t = map.tileAt(x, y);
+        if (t == TileType.trapSmall) {
+          world.add(SpikeTrap(tile: Point(x, y), big: false));
+        } else if (t == TileType.trapBig) {
+          world.add(SpikeTrap(tile: Point(x, y), big: true));
+        }
+      }
+    }
 
     for (final t in map.torchSpawns) {
       final px = t.x * tileSize;
@@ -234,6 +260,14 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       final pos = _tileBottom(p.x, p.y);
       world.add(FirePot(position: pos));
       world.add(GlowComponent(center: pos - Vector2(0, 6), radius: 30));
+    }
+
+    for (final d in map.doorSpawns) {
+      world.add(Door(spawn: d));
+    }
+
+    for (final s in map.shopPedestals) {
+      world.add(ShopPedestal(spawn: s));
     }
 
     world.add(StairsTrigger(
@@ -260,11 +294,18 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       ));
     }
 
+    if (map.bossSpawn != null) {
+      world.add(Monster(
+        def: monsters[MonsterType.boss]!,
+        position: _tileBottom(map.bossSpawn!.x, map.bossSpawn!.y),
+        floor: floor,
+      )..isBoss = true);
+    }
+
     player!.position = _tileBottom(map.playerSpawn.x, map.playerSpawn.y);
     world.add(player!);
 
     _mapReady = true;
-    // Infinite maxSpeed so the camera never lags behind the player.
     camera.follow(player!, snap: true);
     refreshCameraBounds();
     snapCameraToPlayer();
@@ -352,6 +393,32 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     coinsNotifier.value = coins;
   }
 
+  void addKey(int n) {
+    keys += n;
+    keysNotifier.value = keys;
+  }
+
+  void addBossKey(int n) {
+    bossKeys += n;
+    bossKeysNotifier.value = bossKeys;
+  }
+
+  /// Spends one normal key if available.
+  bool tryUseKey() {
+    if (keys <= 0) return false;
+    keys--;
+    keysNotifier.value = keys;
+    return true;
+  }
+
+  /// Spends one boss key if available.
+  bool tryUseBossKey() {
+    if (bossKeys <= 0) return false;
+    bossKeys--;
+    bossKeysNotifier.value = bossKeys;
+    return true;
+  }
+
   bool spendCoins(int amount) {
     if (coins < amount) return false;
     coins -= amount;
@@ -366,29 +433,49 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     maxHpNotifier.value = p.maxHp;
   }
 
-  /// Applies a between-floor shop purchase using run coins.
-  /// Returns false if unaffordable or already maxed.
+  /// Applies a shop-room pedestal purchase at a fixed [cost].
+  bool buyShopPedestal(StoreUpgrade upgrade, int cost) {
+    final level = SessionBonus.levelOf(upgrade);
+    if (level >= upgrade.maxLevel) return false;
+    if (!spendCoins(cost)) return false;
+    SessionBonus.bumpLevel(upgrade);
+    _applyUpgrade(upgrade);
+    return true;
+  }
+
+  /// Legacy between-floor shop purchase (kept for screenshots / tests).
   bool buyShopUpgrade(StoreUpgrade upgrade) {
     final level = SessionBonus.levelOf(upgrade);
     if (level >= upgrade.maxLevel) return false;
     final cost = upgrade.costForLevel(level);
     if (!spendCoins(cost)) return false;
-
     SessionBonus.bumpLevel(upgrade);
+    _applyUpgrade(upgrade);
+    return true;
+  }
+
+  void _applyUpgrade(StoreUpgrade upgrade) {
     switch (upgrade.unit) {
       case StoreUnit.heal:
         player?.heal(upgrade.perLevel);
       case StoreUnit.halfHearts:
         SessionBonus.extraHp += upgrade.perLevel;
         raiseMaxHp(upgrade.perLevel);
+      case StoreUnit.vitaQuarter:
+        // +¼ cuore (1 HP when 4 HP = 1 cuore; here 2 HP = 1 cuore so +1
+        // is half a half-heart ≈ quarter of a full heart display unit).
+        SessionBonus.extraHp += upgrade.perLevel;
+        raiseMaxHp(upgrade.perLevel);
+        player?.heal(999);
       case StoreUnit.damage:
         SessionBonus.extraDamage += upgrade.perLevel;
+      case StoreUnit.defense:
+        SessionBonus.extraDefense += upgrade.perLevel;
       case StoreUnit.speed:
         SessionBonus.extraSpeed += upgrade.perLevel;
       case StoreUnit.cooldownHundredths:
         SessionBonus.extraCooldown += upgrade.perLevel / 100.0;
     }
-    return true;
   }
 
   void onMonsterKilled() => kills++;
@@ -397,7 +484,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     world.add(FloatingText(text: '$amount', position: worldPos));
   }
 
-  /// Current merchant encounter chance (base + pity).
+  /// Current shop-room spawn chance (base + pity).
   double get currentShopChance =>
       (shopChance + floorsWithoutShop * shopPityStep).clamp(0.0, 1.0);
 
@@ -411,28 +498,19 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       overlays.add(Overlays.unlock);
     }
 
-    // Floor transition overlay (fade) before loading / shop.
     if (overlays.registeredOverlays.contains(Overlays.floorTransition)) {
       overlays.add(Overlays.floorTransition);
       await Future<void>.delayed(const Duration(milliseconds: 280));
     }
 
-    final meetMerchant = _rng.nextDouble() < currentShopChance;
-    if (meetMerchant && overlays.registeredOverlays.contains(Overlays.shop)) {
-      floorsWithoutShop = 0;
-      pauseEngine();
-      overlays.add(Overlays.shop);
-    } else {
-      floorsWithoutShop++;
-      await _loadFloor();
-    }
+    await _loadFloor();
 
     if (overlays.isActive(Overlays.floorTransition)) {
       overlays.remove(Overlays.floorTransition);
     }
   }
 
-  /// Called by the shop overlay when the player is done shopping.
+  /// Kept for screenshot tooling that still opens the overlay shop.
   Future<void> finishShopAndEnterFloor() async {
     if (overlays.isActive(Overlays.shop)) {
       overlays.remove(Overlays.shop);

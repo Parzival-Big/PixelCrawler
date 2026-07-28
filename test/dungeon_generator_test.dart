@@ -36,7 +36,12 @@ void main() {
           expect(map.tileAt(map.stairsPos.x, map.stairsPos.y), TileType.stairs);
           expect(reachable(map, map.playerSpawn, map.stairsPos), isTrue,
               reason: 'stairs must be reachable from spawn');
-          expect(map.monsterSpawns, isNotEmpty);
+          expect(map.bossSpawn, isNotNull);
+          expect(map.doorSpawns, isNotEmpty);
+          expect(
+            map.roomInfos.any((r) => r.kind == RoomKind.boss),
+            isTrue,
+          );
 
           for (final p in [
             ...map.monsterSpawns,

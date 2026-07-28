@@ -105,6 +105,44 @@ class _Hud extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Image.asset(
+                      'assets/images/objects/key.png',
+                      width: 18,
+                      height: 18,
+                      filterQuality: FilterQuality.none,
+                    ),
+                    const SizedBox(width: 4),
+                    ValueListenableBuilder<int>(
+                      valueListenable: game.keysNotifier,
+                      builder: (_, keys, _) => Text(
+                        '$keys',
+                        style: const TextStyle(
+                          fontFamily: pixelFont,
+                          fontSize: 10,
+                          color: PixelColors.textDim,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Image.asset(
+                      'assets/images/objects/key_boss.png',
+                      width: 18,
+                      height: 18,
+                      filterQuality: FilterQuality.none,
+                    ),
+                    const SizedBox(width: 4),
+                    ValueListenableBuilder<int>(
+                      valueListenable: game.bossKeysNotifier,
+                      builder: (_, keys, _) => Text(
+                        '$keys',
+                        style: const TextStyle(
+                          fontFamily: pixelFont,
+                          fontSize: 10,
+                          color: PixelColors.gold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ],

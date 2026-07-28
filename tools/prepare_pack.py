@@ -113,6 +113,32 @@ def objects():
     save(raw("objects", "shield.png"), "objects", "shield.png")
     save(strip([raw("objects", "bomb.png"), raw("objects", "bomb_active.png")]),
          "objects", "bomb.png")
+    save(raw("objects", "key_small.png"), "objects", "key.png")
+    save(raw("objects", "key_boss.png"), "objects", "key_boss.png")
+
+    # Door faces: vertical (top) and horizontal (left) for each state.
+    door_kinds = {
+        "open": "door_stone_open",
+        "closed": "door_stone_jagged_closed",
+        "locked": "door_stone_lock_small",
+        "boss": "door_stone_boss",
+    }
+    for name, src in door_kinds.items():
+        save(raw(f"{src}_top.png"), "tiles", f"door_{name}_v.png")
+        save(raw(f"{src}_left.png"), "tiles", f"door_{name}_h.png")
+
+
+def hazard_tiles():
+    """Pits and the two spike trap types (off + on frames)."""
+    save(raw("floor_abyss.png"), "tiles", "pit.png")
+    save(strip([
+        raw("floor_small_spike_trap_off.png"),
+        raw("floor_small_spike_trap_on.png"),
+    ]), "tiles", "trap_small.png")
+    save(strip([
+        raw("floor_big_spike_trap_off.png"),
+        raw("floor_big_spike_trap_on.png"),
+    ]), "tiles", "trap_big.png")
 
 
 # ------------------------------------------------------------- monsters
@@ -153,6 +179,7 @@ def monsters():
     save(two_frames("spider"), "monsters", "spider.png")
     save(two_frames("ghost"), "monsters", "ghost.png")
     save(two_frames("flying_eye"), "monsters", "flying_eye.png")
+    save(two_frames("devil"), "monsters", "devil.png")
 
 
 # --------------------------------------------------------------- heroes
@@ -271,6 +298,7 @@ def main():
     clean_junk()
     tiles()
     objects()
+    hazard_tiles()
     monsters()
     heroes()
     effects()

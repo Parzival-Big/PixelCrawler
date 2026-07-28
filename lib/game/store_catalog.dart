@@ -1,4 +1,4 @@
-/// Upgrades sold between floors. Effects last for the current run only.
+/// Upgrades sold in the on-floor shop room. Effects last for the current run.
 class StoreUpgrade {
   const StoreUpgrade({
     required this.id,
@@ -25,72 +25,95 @@ class StoreUpgrade {
   int costForLevel(int currentLevel) => baseCost + costStep * currentLevel;
 }
 
-enum StoreUnit { halfHearts, damage, speed, cooldownHundredths, heal }
+enum StoreUnit {
+  /// +1 HP (¼ cuore when 4 HP = 1 cuore) and full heal.
+  vitaQuarter,
+  damage,
+  defense,
+  speed,
+  cooldownHundredths,
+  halfHearts,
+  heal,
+}
 
-/// Between-floor merchant catalog (run-scoped).
+/// On-floor shop catalog (3 pedestals, prices rolled 30–50).
 class StoreCatalog {
   StoreCatalog._();
 
-  static const heal = StoreUpgrade(
-    id: 'heal',
-    name: 'POZIONE',
-    description: 'Cura 2 cuori\nsubito',
-    baseCost: 6,
-    costStep: 2,
-    maxLevel: 99,
-    perLevel: 4,
-    unit: StoreUnit.heal,
-    iconAsset: 'assets/images/objects/potion_red.png',
-  );
-
-  static const maxHp = StoreUpgrade(
-    id: 'max_hp',
-    name: 'CUORE EXTRA',
-    description: '+1 cuore di vita\nmassima (questa run)',
-    baseCost: 12,
-    costStep: 8,
-    maxLevel: 5,
-    perLevel: 2,
-    unit: StoreUnit.halfHearts,
+  static const vita = StoreUpgrade(
+    id: 'vita',
+    name: 'VITA',
+    description: '+1/4 cuore max\ne cura tutta la vita',
+    baseCost: 35,
+    costStep: 0,
+    maxLevel: 8,
+    perLevel: 1,
+    unit: StoreUnit.vitaQuarter,
     iconAsset: 'assets/images/ui/heart_full.png',
   );
 
   static const damage = StoreUpgrade(
-    id: 'damage',
-    name: 'LAMA',
+    id: 'atk',
+    name: 'ATTACCO',
     description: '+1 danno\n(questa run)',
-    baseCost: 14,
-    costStep: 10,
-    maxLevel: 5,
+    baseCost: 40,
+    costStep: 0,
+    maxLevel: 8,
     perLevel: 1,
     unit: StoreUnit.damage,
     iconAsset: 'assets/images/objects/sword.png',
   );
 
-  static const speed = StoreUpgrade(
-    id: 'speed',
-    name: 'STIVALI',
-    description: '+8 velocita\n(questa run)',
-    baseCost: 10,
-    costStep: 8,
+  static const defense = StoreUpgrade(
+    id: 'def',
+    name: 'DIFESA',
+    description: '-1 danno subito\n(questa run)',
+    baseCost: 40,
+    costStep: 0,
     maxLevel: 5,
-    perLevel: 8,
+    perLevel: 1,
+    unit: StoreUnit.defense,
+    iconAsset: 'assets/images/objects/shield.png',
+  );
+
+  static const speed = StoreUpgrade(
+    id: 'move',
+    name: 'VELOCITA',
+    description: '+10 velocita\nmovimento',
+    baseCost: 35,
+    costStep: 0,
+    maxLevel: 6,
+    perLevel: 10,
     unit: StoreUnit.speed,
     iconAsset: 'assets/images/objects/boot.png',
   );
 
   static const attackSpeed = StoreUpgrade(
-    id: 'attack_speed',
-    name: 'RAFFICA',
-    description: 'Attacchi piu\nrapidi (questa run)',
-    baseCost: 12,
-    costStep: 10,
-    maxLevel: 4,
-    perLevel: 4,
+    id: 'atk_spd',
+    name: 'ATT. RAPIDO',
+    description: 'Attacchi piu\nrapidi',
+    baseCost: 40,
+    costStep: 0,
+    maxLevel: 5,
+    perLevel: 5,
     unit: StoreUnit.cooldownHundredths,
     iconAsset: 'assets/images/effects/arrow.png',
   );
 
-  /// Offered in the between-floor shop (heal is always available).
-  static const all = <StoreUpgrade>[heal, maxHp, damage, speed, attackSpeed];
+  /// Pool for the 3 shop-room pedestals.
+  static const shopRoomPool = <StoreUpgrade>[
+    vita,
+    damage,
+    defense,
+    speed,
+    attackSpeed,
+  ];
+
+  static StoreUpgrade byId(String id) =>
+      shopRoomPool.firstWhere((u) => u.id == id);
+
+  /// Legacy aliases used by older shop overlay / tests.
+  static const heal = vita;
+  static const maxHp = vita;
+  static const all = shopRoomPool;
 }

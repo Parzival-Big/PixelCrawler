@@ -40,6 +40,11 @@ class GameAssets {
   static const potionBlue = SpriteSpec('objects/potion_blue.png');
   static const coin = AnimSpec('objects/coin.png', 16, 16, 1, 1);
   static const firePot = AnimSpec('objects/torch.png', 16, 16, 6, 0.12);
+  static const key = SpriteSpec('objects/key.png');
+  static const keyBoss = SpriteSpec('objects/key_boss.png');
+  static const shield = SpriteSpec('objects/shield.png');
+  static const boot = SpriteSpec('objects/boot.png');
+  static const sword = SpriteSpec('objects/sword.png');
 
   /// Purely decorative props scattered in rooms.
   static const decor = <SpriteSpec>[
@@ -49,6 +54,21 @@ class GameAssets {
     SpriteSpec('objects/skull.png'),
     SpriteSpec('objects/bone.png'),
   ];
+
+  // Pits + spike traps (two types).
+  static const pit = SpriteSpec('tiles/pit.png');
+  static const trapSmall = AnimSpec('tiles/trap_small.png', 16, 16, 2, 0.35);
+  static const trapBig = AnimSpec('tiles/trap_big.png', 16, 16, 2, 0.4);
+
+  // Doors: vertical (N/S openings) and horizontal (E/W openings).
+  static const doorOpenV = SpriteSpec('tiles/door_open_v.png');
+  static const doorOpenH = SpriteSpec('tiles/door_open_h.png');
+  static const doorClosedV = SpriteSpec('tiles/door_closed_v.png');
+  static const doorClosedH = SpriteSpec('tiles/door_closed_h.png');
+  static const doorLockedV = SpriteSpec('tiles/door_locked_v.png');
+  static const doorLockedH = SpriteSpec('tiles/door_locked_h.png');
+  static const doorBossV = SpriteSpec('tiles/door_boss_v.png');
+  static const doorBossH = SpriteSpec('tiles/door_boss_h.png');
 
   // --------------------------------------------------------- monsters
   // Idle strips are 16×17 (1px headroom so the bob-up frame never clips).
@@ -63,6 +83,7 @@ class GameAssets {
   static const spider = AnimSpec('monsters/spider.png', 16, 17, 2, 0.16);
   static const ghost = AnimSpec('monsters/ghost.png', 16, 17, 2, 0.3);
   static const flyingEye = AnimSpec('monsters/flying_eye.png', 16, 17, 2, 0.14);
+  static const devil = AnimSpec('monsters/devil.png', 16, 17, 2, 0.22);
 
   // ----------------------------------------------------------- heroes
   static const knight = AnimSpec('heroes/knight.png', 16, 17, 2, 0.25);
@@ -100,6 +121,22 @@ class GameAssets {
         'objects/coin.png',
         'objects/torch.png',
         ...decor.map((s) => s.path),
+        'objects/key.png',
+        'objects/key_boss.png',
+        'objects/shield.png',
+        'objects/boot.png',
+        'objects/sword.png',
+        'tiles/pit.png',
+        'tiles/trap_small.png',
+        'tiles/trap_big.png',
+        'tiles/door_open_v.png',
+        'tiles/door_open_h.png',
+        'tiles/door_closed_v.png',
+        'tiles/door_closed_h.png',
+        'tiles/door_locked_v.png',
+        'tiles/door_locked_h.png',
+        'tiles/door_boss_v.png',
+        'tiles/door_boss_h.png',
         'monsters/slime.png',
         'monsters/bat.png',
         'monsters/rat.png',
@@ -109,6 +146,7 @@ class GameAssets {
         'monsters/spider.png',
         'monsters/ghost.png',
         'monsters/flying_eye.png',
+        'monsters/devil.png',
         'heroes/knight.png',
         'heroes/mage.png',
         'heroes/hunter.png',
