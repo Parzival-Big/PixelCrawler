@@ -7,6 +7,7 @@ import '../monsters.dart';
 import 'attacks.dart';
 import 'game_character.dart';
 import 'pickups.dart';
+import 'shop_pedestal.dart';
 
 class Monster extends GameCharacter {
   Monster({
@@ -22,6 +23,8 @@ class Monster extends GameCharacter {
   final MonsterDef def;
   final int _floor;
   final _rng = Random();
+
+  bool isBoss = false;
 
   double _contactTimer = 0;
   double _wanderTimer = 0;
@@ -127,6 +130,11 @@ class Monster extends GameCharacter {
         position: position +
             Vector2((_rng.nextDouble() - 0.5) * 10, (_rng.nextDouble() - 0.5) * 8),
       ));
+    }
+    if (isBoss || def.type == MonsterType.boss) {
+      game.world.add(KeyPickup(position: position.clone(), boss: true));
+    } else if (_rng.nextDouble() < 0.08) {
+      game.world.add(KeyPickup(position: position.clone()));
     }
     if (_rng.nextDouble() < 0.10 + _floor * 0.005) {
       game.world.add(PotionPickup.red(position: position.clone()));

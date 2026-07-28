@@ -9,6 +9,7 @@ import '../pixel_crawler_game.dart';
 import 'attacks.dart';
 import 'monster.dart';
 import 'player.dart';
+import 'shop_pedestal.dart';
 import 'solid_obstacle.dart';
 
 /// Base for items collected by touching them.
@@ -88,7 +89,7 @@ class PotionPickup extends Pickup {
 /// the player (and nearby monsters).
 class BombPickup extends SpriteAnimationComponent
     with HasGameReference<PixelCrawlerGame> {
-  BombPickup({required Vector2 position, this.fuse = 2.0})
+  BombPickup({required Vector2 position, this.fuse = 1.0})
       : super(
           position: position,
           size: Vector2.all(16),
@@ -190,6 +191,12 @@ class Chest extends SpriteComponent
           position: position + Vector2((_rng.nextDouble() - 0.5) * 12, 10),
         ));
       }
+      // Normal keys drop from chests fairly often.
+      if (_rng.nextDouble() < 0.45) {
+        game.world.add(KeyPickup(
+          position: position + Vector2((_rng.nextDouble() - 0.5) * 10, 8),
+        ));
+      }
     }
   }
 }
@@ -209,6 +216,8 @@ class StairsTrigger extends PositionComponent
     final player = game.player;
     if (player != null && !player.isDead &&
         player.position.distanceTo(position) < 8) {
+      // Stairs require the boss key dropped by the floor boss.
+      if (!game.tryUseBossKey()) return;
       _used = true;
       game.goToNextFloor();
     }

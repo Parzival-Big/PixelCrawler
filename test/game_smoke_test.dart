@@ -88,33 +88,45 @@ void main() {
   );
 
   testWithGame<PixelCrawlerGame>(
-    'between-floor shop spends run coins on temporary upgrades',
+    'shop room upgrades spend run coins on temporary bonuses',
     () => PixelCrawlerGame(heroType: HeroType.knight),
     (game) async {
       game.update(0);
       SessionBonus.reset();
-      game.addCoins(40);
+      game.addCoins(120);
 
-      expect(game.buyShopUpgrade(StoreCatalog.damage), isTrue);
+      expect(game.buyShopPedestal(StoreCatalog.damage, 40), isTrue);
       expect(SessionBonus.extraDamage, 1);
-      expect(game.coins, 40 - StoreCatalog.damage.baseCost);
+      expect(game.coins, 80);
 
-      expect(game.buyShopUpgrade(StoreCatalog.maxHp), isTrue);
-      expect(SessionBonus.extraHp, StoreCatalog.maxHp.perLevel);
-      expect(
-        game.player!.maxHp,
-        heroes[HeroType.knight]!.maxHp + SessionBonus.extraHp,
-      );
+      expect(game.buyShopPedestal(StoreCatalog.defense, 35), isTrue);
+      expect(SessionBonus.extraDefense, 1);
+      expect(game.coins, 45);
 
+      final beforeHp = game.player!.maxHp;
       game.player!.hp = 2;
       game.hpNotifier.value = 2;
-      expect(game.buyShopUpgrade(StoreCatalog.heal), isTrue);
-      expect(game.player!.hp, greaterThan(2));
+      expect(game.buyShopPedestal(StoreCatalog.vita, 30), isTrue);
+      expect(game.player!.maxHp, beforeHp + 1);
+      expect(game.player!.hp, game.player!.maxHp);
 
       game.coins = 0;
       game.coinsNotifier.value = 0;
-      expect(game.buyShopUpgrade(StoreCatalog.speed), isFalse);
+      expect(game.buyShopPedestal(StoreCatalog.speed, 40), isFalse);
       expect(SessionBonus.extraSpeed, 0);
+    },
+  );
+
+  testWithGame<PixelCrawlerGame>(
+    'boss key is required to take the stairs',
+    () => PixelCrawlerGame(heroType: HeroType.knight),
+    (game) async {
+      game.update(0);
+      expect(game.tryUseBossKey(), isFalse);
+      game.addBossKey(1);
+      expect(game.bossKeys, 1);
+      expect(game.tryUseBossKey(), isTrue);
+      expect(game.bossKeys, 0);
     },
   );
 }

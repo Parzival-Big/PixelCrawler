@@ -10,6 +10,7 @@ enum MonsterType {
   spider,
   ghost,
   flyingEye,
+  boss,
 }
 
 /// Skeleton variants that bone piles / skulls can transmute into.
@@ -155,6 +156,16 @@ const monsters = <MonsterType, MonsterDef>{
     ranged: true,
     preferredRange: 75,
     projectileCooldown: 1.2,
+  ),
+  MonsterType.boss: MonsterDef(
+    type: MonsterType.boss,
+    anim: GameAssets.devil,
+    baseHp: 20,
+    hpPerFloor: 4,
+    damage: 3,
+    speed: 40,
+    aggroRange: 180,
+    coinDrop: 8,
   ),
 };
 
