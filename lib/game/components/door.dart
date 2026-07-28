@@ -27,8 +27,9 @@ class Door extends SpriteComponent
           position: Vector2(
             spawn.pos.x * tileSize,
             spawn.pos.y * tileSize,
-          ),
-          size: Vector2.all(tileSize),
+          ) +
+              wallVisualOffset(),
+          size: Vector2.all(wallVisualSize),
           anchor: Anchor.topLeft,
           priority: behindPriority,
         );
@@ -47,31 +48,33 @@ class Door extends SpriteComponent
   DoorDir get displayDir => _displayDir;
 
   /// Structural frame drawn above the hero by [DoorLintel].
+  /// Coords are in the scaled (1.5×) local space of this component.
   Rect get frameRect {
+    const s = wallVisualScale;
     switch (_displayDir) {
       case DoorDir.north:
-        return const Rect.fromLTWH(0, 0, 16, 7);
+        return Rect.fromLTWH(0, 0, 16 * s, 7 * s);
       case DoorDir.south:
-        // Bright wall body under the arch — occludes the hero in 2.5D.
-        return const Rect.fromLTWH(0, 9, 16, 7);
+        return Rect.fromLTWH(0, 9 * s, 16 * s, 7 * s);
       case DoorDir.west:
-        return const Rect.fromLTWH(0, 0, 7, 16);
+        return Rect.fromLTWH(0, 0, 7 * s, 16 * s);
       case DoorDir.east:
-        return const Rect.fromLTWH(9, 0, 7, 16);
+        return Rect.fromLTWH(9 * s, 0, 7 * s, 16 * s);
     }
   }
 
   /// Dark passage kept under the hero.
   Rect get openingRect {
+    const s = wallVisualScale;
     switch (_displayDir) {
       case DoorDir.north:
-        return const Rect.fromLTWH(0, 7, 16, 9);
+        return Rect.fromLTWH(0, 7 * s, 16 * s, 9 * s);
       case DoorDir.south:
-        return const Rect.fromLTWH(0, 0, 16, 9);
+        return Rect.fromLTWH(0, 0, 16 * s, 9 * s);
       case DoorDir.west:
-        return const Rect.fromLTWH(7, 0, 9, 16);
+        return Rect.fromLTWH(7 * s, 0, 9 * s, 16 * s);
       case DoorDir.east:
-        return const Rect.fromLTWH(0, 0, 9, 16);
+        return Rect.fromLTWH(0, 0, 9 * s, 16 * s);
     }
   }
 
@@ -83,7 +86,13 @@ class Door extends SpriteComponent
   @override
   Rect get solidRect {
     if (open) return Rect.zero;
-    return Rect.fromLTWH(position.x, position.y, tileSize, tileSize);
+    // Collision stays on the logical 16×16 tile, not the 1.5× visual.
+    return Rect.fromLTWH(
+      spawn.pos.x * tileSize,
+      spawn.pos.y * tileSize,
+      tileSize,
+      tileSize,
+    );
   }
 
   DoorDir facingForRoom(RoomInfo? room) {
@@ -228,7 +237,7 @@ class DoorLintel extends PositionComponent
   DoorLintel({required this.door})
       : super(
           position: door.position.clone(),
-          size: Vector2.all(tileSize),
+          size: door.size.clone(),
           anchor: Anchor.topLeft,
           priority: Door.underpassPriority,
         );
@@ -237,6 +246,7 @@ class DoorLintel extends PositionComponent
 
   void sync() {
     position.setFrom(door.position);
+    size.setFrom(door.size);
     priority = Door.underpassPriority;
   }
 

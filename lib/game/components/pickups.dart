@@ -283,29 +283,37 @@ class StairsTrigger extends PositionComponent
   }
 }
 
-/// Animated torch overlay on a wall tile. Sprite strip matches [side]
-/// (`top`/`bottom`/`left`/`right`) from the asset pack.
+/// Animated torch overlay on a wall tile. Sprite strip always matches
+/// [wallTileNameFor] for the *current* room (`top`/`bottom`/`left`/`right`).
 class Torch extends SpriteAnimationComponent
     with HasGameReference<PixelCrawlerGame> {
   Torch({
     required Vector2 position,
-    required this.side,
+    required WallSide side,
     required this.tileX,
     required this.tileY,
-  }) : super(
-          position: position,
-          size: Vector2.all(16),
+  })  : _side = side,
+        super(
+          position: position + wallVisualOffset(),
+          size: Vector2.all(wallVisualSize),
           anchor: Anchor.topLeft,
           // Above baked walls, below the hero and door frames.
           priority: -9990,
         );
 
-  final WallSide side;
+  WallSide _side;
   final int tileX;
   final int tileY;
 
+  WallSide get side => _side;
+
   @override
   Future<void> onLoad() async {
+    _applySide(_side);
+  }
+
+  void _applySide(WallSide side) {
+    _side = side;
     animation = GameAssets.torchWallFor(side.assetKey).animation();
     animationTicker?.clock = Random().nextDouble();
   }
@@ -313,7 +321,17 @@ class Torch extends SpriteAnimationComponent
   @override
   void update(double dt) {
     super.update(dt);
-    opacity = tileInCurrentRoom(game, tileX, tileY) ? 1 : 0;
+    final room = game.currentRoom;
+    if (room == null || !tileInCurrentRoom(game, tileX, tileY)) {
+      opacity = 0;
+      return;
+    }
+    opacity = 1;
+    final name = wallTileNameFor(game.map, tileX, tileY, room: room);
+    final resolved = WallSide.fromAssetKey(name);
+    if (resolved != null && resolved != _side) {
+      _applySide(resolved);
+    }
   }
 }
 

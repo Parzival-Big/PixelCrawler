@@ -22,6 +22,15 @@ enum WallSide {
       };
 
   String get assetKey => name;
+
+  /// Only straight wall faces — corner tile names return null.
+  static WallSide? fromAssetKey(String? key) => switch (key) {
+        'top' => WallSide.top,
+        'bottom' => WallSide.bottom,
+        'left' => WallSide.left,
+        'right' => WallSide.right,
+        _ => null,
+      };
 }
 
 /// A door opening between two rooms.
@@ -180,4 +189,60 @@ class DungeonMap {
     }
     return null;
   }
+}
+
+/// Picks the wall tile orientation from walkable neighbours.
+///
+/// Pack names match room sides: `top` = north wall, `bottom` = south,
+/// `left` = west, `right` = east.
+///
+/// When [room] is set, only floor inside that room's interior counts — so a
+/// shared wall between two rooms faces into the room being rendered.
+String? wallTileNameFor(
+  DungeonMap map,
+  int x,
+  int y, {
+  RoomInfo? room,
+}) {
+  bool f(int dx, int dy) {
+    final nx = x + dx;
+    final ny = y + dy;
+    if (room != null) {
+      final b = room.bounds;
+      if (nx < b.left ||
+          nx >= b.left + b.width ||
+          ny < b.top ||
+          ny >= b.top + b.height) {
+        return false;
+      }
+    }
+    return map.isWalkable(nx, ny);
+  }
+
+  final n = f(0, -1), s = f(0, 1), w = f(-1, 0), e = f(1, 0);
+
+  if (s && e) return 'inner_tl';
+  if (s && w) return 'inner_tr';
+  if (n && e) return 'inner_bl';
+  if (n && w) return 'inner_br';
+
+  if (s) return 'top';
+  if (n) return 'bottom';
+  if (e) return 'left';
+  if (w) return 'right';
+
+  if (f(1, 1)) return 'inner_tl';
+  if (f(-1, 1)) return 'inner_tr';
+  if (f(1, -1)) return 'inner_bl';
+  if (f(-1, -1)) return 'inner_br';
+
+  final wallN = map.tileAt(x, y - 1) == TileType.wall;
+  final wallS = map.tileAt(x, y + 1) == TileType.wall;
+  final wallW = map.tileAt(x - 1, y) == TileType.wall;
+  final wallE = map.tileAt(x + 1, y) == TileType.wall;
+  if (wallS && wallE && !wallN && !wallW) return 'outer_tl';
+  if (wallS && wallW && !wallN && !wallE) return 'outer_tr';
+  if (wallN && wallE && !wallS && !wallW) return 'outer_bl';
+  if (wallN && wallW && !wallS && !wallE) return 'outer_br';
+  return null;
 }

@@ -8,6 +8,19 @@ import '../pixel_crawler_game.dart';
 
 const double tileSize = 16;
 
+/// Visual scale for walls, doors and wall torches (pack tiles stay 16²).
+const double wallVisualScale = 1.5;
+
+/// Drawn size of a wall / door / wall-torch sprite.
+double get wallVisualSize => tileSize * wallVisualScale;
+
+/// Extra pixels on each side when a 16px tile is drawn at [wallVisualScale].
+double get wallOverhang => (wallVisualSize - tileSize) / 2;
+
+/// Top-left offset so a 1.5× sprite stays centred on its tile.
+Vector2 wallVisualOffset([double ox = 0, double oy = 0]) =>
+    Vector2(-wallOverhang + ox, -wallOverhang + oy);
+
 /// True when tile (tx, ty) lies in the current room's wall ring + interior.
 bool tileInCurrentRoom(PixelCrawlerGame game, int tx, int ty) {
   final room = game.currentRoom;
@@ -57,32 +70,38 @@ class DungeonRenderer extends SpriteComponent
     final outer = room.outerBounds;
     final w = outer.width;
     final h = outer.height;
+    // Margin so 1.5× wall sprites are not clipped at the room edge.
+    final margin = wallOverhang;
+    final imgW = w * tileSize + margin * 2;
+    final imgH = h * tileSize + margin * 2;
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
 
     final floorSheet = GameAssets.floorTiles;
     final stairsSprite = GameAssets.stairs.sprite();
     final aoPaint = ui.Paint()..color = const ui.Color(0x3D000000);
-    final sizeVec = Vector2.all(tileSize);
+    final floorSize = Vector2.all(tileSize);
+    final wallSize = Vector2.all(wallVisualSize);
     final bg = ui.Paint()..color = const ui.Color(0xFF0E222B);
-    canvas.drawRect(
-      ui.Rect.fromLTWH(0, 0, w * tileSize, h * tileSize),
-      bg,
-    );
+    canvas.drawRect(ui.Rect.fromLTWH(0, 0, imgW, imgH), bg);
 
     for (var y = 0; y < h; y++) {
       for (var x = 0; x < w; x++) {
         final tx = outer.left + x;
         final ty = outer.top + y;
         final t = map.tileAt(tx, ty);
-        final pos = Vector2(x * tileSize, y * tileSize);
+        final pos = Vector2(margin + x * tileSize, margin + y * tileSize);
         switch (t) {
           case TileType.empty:
             break;
           case TileType.floor:
             final r = (tx * 73856093 ^ ty * 19349663) % 23;
             final variant = r < 20 ? r % 2 : (r == 20 ? 2 : 3);
-            floorSheet.frame(variant).render(canvas, position: pos, size: sizeVec);
+            floorSheet.frame(variant).render(
+                  canvas,
+                  position: pos,
+                  size: floorSize,
+                );
             if (map.tileAt(tx, ty - 1) == TileType.wall) {
               canvas.drawRect(
                 ui.Rect.fromLTWH(pos.x, pos.y, tileSize, 3),
@@ -91,86 +110,38 @@ class DungeonRenderer extends SpriteComponent
             }
           case TileType.trapSmall:
           case TileType.trapBig:
-            floorSheet.frame(0).render(canvas, position: pos, size: sizeVec);
+            floorSheet.frame(0).render(canvas, position: pos, size: floorSize);
           case TileType.pit:
-            GameAssets.pit.sprite().render(canvas, position: pos, size: sizeVec);
+            GameAssets.pit.sprite().render(canvas, position: pos, size: floorSize);
           case TileType.wall:
+            // Doors / torches replace the wall face; still bake a base tile.
             final name = wallTileNameFor(map, tx, ty, room: room);
             if (name != null) {
               final sheet = GameAssets.wallTiles[name]!;
               final variant = (tx * 7 + ty * 13) % (sheet.frames >= 2 ? 2 : 1);
-              sheet.frame(variant).render(canvas, position: pos, size: sizeVec);
+              sheet.frame(variant).render(
+                    canvas,
+                    position: pos + wallVisualOffset(),
+                    size: wallSize,
+                  );
             }
           case TileType.stairs:
-            stairsSprite.render(canvas, position: pos, size: sizeVec);
+            stairsSprite.render(canvas, position: pos, size: floorSize);
         }
       }
     }
 
     final image = recorder.endRecording().toImageSync(
-          w * tileSize.toInt(),
-          h * tileSize.toInt(),
+          imgW.round(),
+          imgH.round(),
         );
     sprite = Sprite(image);
-    size = Vector2(w * tileSize, h * tileSize);
-    position = Vector2(outer.left * tileSize, outer.top * tileSize);
+    size = Vector2(imgW, imgH);
+    position = Vector2(
+      outer.left * tileSize - margin,
+      outer.top * tileSize - margin,
+    );
   }
-}
-
-/// Picks the wall tile orientation from walkable neighbours.
-///
-/// Pack names match room sides: `top` = north wall, `bottom` = south,
-/// `left` = west, `right` = east.
-///
-/// When [room] is set, only floor inside that room's interior counts — so a
-/// shared wall between two rooms faces into the room being rendered.
-String? wallTileNameFor(
-  DungeonMap map,
-  int x,
-  int y, {
-  RoomInfo? room,
-}) {
-  bool f(int dx, int dy) {
-    final nx = x + dx;
-    final ny = y + dy;
-    if (room != null) {
-      final b = room.bounds;
-      if (nx < b.left ||
-          nx >= b.left + b.width ||
-          ny < b.top ||
-          ny >= b.top + b.height) {
-        return false;
-      }
-    }
-    return map.isWalkable(nx, ny);
-  }
-
-  final n = f(0, -1), s = f(0, 1), w = f(-1, 0), e = f(1, 0);
-
-  if (s && e) return 'inner_tl';
-  if (s && w) return 'inner_tr';
-  if (n && e) return 'inner_bl';
-  if (n && w) return 'inner_br';
-
-  if (s) return 'top';
-  if (n) return 'bottom';
-  if (e) return 'left';
-  if (w) return 'right';
-
-  if (f(1, 1)) return 'inner_tl';
-  if (f(-1, 1)) return 'inner_tr';
-  if (f(1, -1)) return 'inner_bl';
-  if (f(-1, -1)) return 'inner_br';
-
-  final wallN = map.tileAt(x, y - 1) == TileType.wall;
-  final wallS = map.tileAt(x, y + 1) == TileType.wall;
-  final wallW = map.tileAt(x - 1, y) == TileType.wall;
-  final wallE = map.tileAt(x + 1, y) == TileType.wall;
-  if (wallS && wallE && !wallN && !wallW) return 'outer_tl';
-  if (wallS && wallW && !wallN && !wallE) return 'outer_tr';
-  if (wallN && wallE && !wallS && !wallW) return 'outer_bl';
-  if (wallN && wallW && !wallS && !wallE) return 'outer_br';
-  return null;
 }
 
 /// Soft additive glow used under torches and fire pots.

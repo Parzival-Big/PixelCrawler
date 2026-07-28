@@ -28,11 +28,13 @@ class RoomOccluder extends PositionComponent
     final room = game.currentRoom;
     if (room == null) return;
     final outer = room.outerBounds;
-    final left = outer.left * tileSize;
-    final top = outer.top * tileSize;
-    final right = (outer.left + outer.width) * tileSize;
-    final bottom = (outer.top + outer.height) * tileSize;
+    // Inset 1px into the room so neighbour seams never peek past the mask.
+    final left = outer.left * tileSize + 1;
+    final top = outer.top * tileSize + 1;
+    final right = (outer.left + outer.width) * tileSize - 1;
+    final bottom = (outer.top + outer.height) * tileSize - 1;
 
+    // Cover neighbour tiles; inset 1px kills seam peeking.
     canvas.drawRect(
       ui.Rect.fromLTRB(left - _extent, top - _extent, right + _extent, top),
       _paint,
