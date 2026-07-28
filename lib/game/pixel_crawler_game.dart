@@ -1,4 +1,4 @@
-import 'dart:math' show Random;
+import 'dart:math' show Random, min;
 
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
@@ -7,19 +7,22 @@ import 'package:flame/input.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart' show KeyEventResult;
+import 'package:flutter/widgets.dart' show KeyEventResult, MediaQuery;
 
 import '../config/game_assets.dart';
 import '../services/save_service.dart';
+import '../ui/adaptive.dart';
 import 'components/dungeon_renderer.dart';
 import 'components/effects.dart';
 import 'components/monster.dart';
 import 'components/pickups.dart';
 import 'components/player.dart';
+import 'components/solid_obstacle.dart';
 import 'dungeon/dungeon_generator.dart';
 import 'dungeon/dungeon_map.dart';
 import 'heroes.dart';
 import 'monsters.dart';
+import 'store_catalog.dart';
 
 /// Names of the Flutter overlays registered on the GameWidget.
 class Overlays {
@@ -27,15 +30,17 @@ class Overlays {
   static const pause = 'pause';
   static const gameOver = 'gameOver';
   static const unlock = 'unlock';
+  static const shop = 'shop';
 }
 
 class PixelCrawlerGame extends FlameGame with KeyboardEvents {
-  PixelCrawlerGame({required this.heroType})
-      : super(
-          camera: CameraComponent.withFixedResolution(width: 384, height: 216),
-        ) {
-    SessionBonus.extraHp = 0;
+  PixelCrawlerGame({required this.heroType}) : super() {
+    SessionBonus.reset();
   }
+
+  /// Vertical world units kept on screen — tablets/unfolded foldables show
+  /// more of the dungeon horizontally while keeping the same vertical FOV.
+  static const designHeight = 216.0;
 
   final HeroType heroType;
   final _rng = Random();
@@ -52,7 +57,9 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   late final coinsNotifier = ValueNotifier<int>(0);
   late final floorNotifier = ValueNotifier<int>(1);
 
-  late final JoystickComponent _joystick;
+  late JoystickComponent _joystick;
+  late HudButtonComponent _attackButton;
+  bool _hudReady = false;
   bool _attackButtonHeld = false;
   final _keysDown = <LogicalKeyboardKey>{};
 
@@ -65,35 +72,77 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   Color backgroundColor() => const Color(0xFF0E222B);
 
   @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    fitCameraToSize(size);
+    layoutHudControls(size);
+  }
+
+  /// Public so tests can exercise resize without a full Flutter bind.
+  void fitCameraToSize(Vector2 size) {
+    if (size.y <= 0) return;
+    camera.viewfinder.zoom = size.y / designHeight;
+  }
+
+  /// Repositions virtual controls for the current canvas / hinge insets.
+  void layoutHudControls(Vector2 size) {
+    if (!_hudReady || size.x <= 0 || size.y <= 0) return;
+    final shortest = min(size.x, size.y);
+    final edge = (shortest * 0.045).clamp(16.0, 52.0);
+    var left = edge;
+    var right = edge;
+    var bottom = edge;
+
+    final ctx = buildContext;
+    if (ctx != null && ctx.mounted) {
+      final mq = MediaQuery.maybeOf(ctx);
+      if (mq != null) {
+        left += mq.hingePadding.left + mq.padding.left * 0.35;
+        right += mq.hingePadding.right + mq.padding.right * 0.35;
+        bottom += mq.hingePadding.bottom + mq.padding.bottom * 0.35;
+      }
+    }
+
+    _joystick.margin = EdgeInsets.only(left: left, bottom: bottom);
+    _attackButton.margin = EdgeInsets.only(right: right, bottom: bottom);
+  }
+
+  @override
   Future<void> onLoad() async {
     await images.loadAll(GameAssets.allImages);
+    fitCameraToSize(size);
+
+    final scale = (size.y / designHeight).clamp(0.9, 2.0);
+    final stickR = 30.0 * scale;
+    final knobR = 13.0 * scale;
+    final btnR = 21.0 * scale;
 
     _joystick = JoystickComponent(
       knob: CircleComponent(
-        radius: 13,
+        radius: knobR,
         paint: Paint()..color = const Color(0x88B9DDA7),
       ),
       background: CircleComponent(
-        radius: 30,
+        radius: stickR,
         paint: Paint()..color = const Color(0x2EB9DDA7),
       ),
       margin: const EdgeInsets.only(left: 24, bottom: 20),
     );
 
-    final attackButton = HudButtonComponent(
+    _attackButton = HudButtonComponent(
       button: CircleComponent(
-        radius: 21,
+        radius: btnR,
         paint: Paint()..color = const Color(0x4468A08A),
         children: [
           CircleComponent(
-            radius: 16,
-            position: Vector2.all(5),
+            radius: btnR * 0.75,
+            position: Vector2.all(btnR * 0.25),
             paint: Paint()..color = const Color(0x99B9DDA7),
           ),
         ],
       ),
       buttonDown: CircleComponent(
-        radius: 21,
+        radius: btnR,
         paint: Paint()..color = const Color(0xCCB9DDA7),
       ),
       margin: const EdgeInsets.only(right: 24, bottom: 18),
@@ -102,7 +151,9 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
       onCancelled: () => _attackButtonHeld = false,
     );
 
-    camera.viewport.addAll([_joystick, attackButton]);
+    camera.viewport.addAll([_joystick, _attackButton]);
+    _hudReady = true;
+    layoutHudControls(size);
 
     final def = heroes[heroType]!;
     player = Player(def: def, position: Vector2.zero());
@@ -127,9 +178,12 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     for (final (p, kind) in map.decorSpawns) {
+      final idx = kind % GameAssets.decor.length;
+      // Indices 0..2 = barrel/crate/table (solid); 3..4 = skull/bone (litter).
       world.add(Decor(
         position: _tileBottom(p.x, p.y),
-        spec: GameAssets.decor[kind % GameAssets.decor.length],
+        spec: GameAssets.decor[idx],
+        solid: idx < 3,
       ));
     }
     for (final p in map.firePotSpawns) {
@@ -222,9 +276,32 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
 
   // ------------------------------------------------------------ events
 
+  /// True when a feet box centred at ([cx], [cy]) overlaps any solid prop.
+  bool solidBlocksFeet(double cx, double cy, double w, double h) {
+    for (final o in world.children.whereType<SolidObstacle>()) {
+      if (o.overlapsFeet(cx, cy, w, h)) return true;
+    }
+    return false;
+  }
+
+  /// True when a world point sits inside a solid prop (for projectiles).
+  bool solidBlocksPoint(Vector2 p) {
+    for (final o in world.children.whereType<SolidObstacle>()) {
+      if (o.containsWorldPoint(p)) return true;
+    }
+    return false;
+  }
+
   void addCoins(int n) {
     coins += n;
     coinsNotifier.value = coins;
+  }
+
+  bool spendCoins(int amount) {
+    if (coins < amount) return false;
+    coins -= amount;
+    coinsNotifier.value = coins;
+    return true;
   }
 
   void raiseMaxHp(int amount) {
@@ -234,29 +311,82 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     maxHpNotifier.value = p.maxHp;
   }
 
+  /// Applies a between-floor shop purchase using run coins.
+  /// Returns false if unaffordable or already maxed.
+  bool buyShopUpgrade(StoreUpgrade upgrade) {
+    final level = SessionBonus.levelOf(upgrade);
+    if (level >= upgrade.maxLevel) return false;
+    final cost = upgrade.costForLevel(level);
+    if (!spendCoins(cost)) return false;
+
+    SessionBonus.bumpLevel(upgrade);
+    switch (upgrade.unit) {
+      case StoreUnit.heal:
+        player?.heal(upgrade.perLevel);
+      case StoreUnit.halfHearts:
+        SessionBonus.extraHp += upgrade.perLevel;
+        raiseMaxHp(upgrade.perLevel);
+      case StoreUnit.damage:
+        SessionBonus.extraDamage += upgrade.perLevel;
+      case StoreUnit.speed:
+        SessionBonus.extraSpeed += upgrade.perLevel;
+      case StoreUnit.cooldownHundredths:
+        SessionBonus.extraCooldown += upgrade.perLevel / 100.0;
+    }
+    return true;
+  }
+
   void onMonsterKilled() => kills++;
 
   void spawnDamageText(int amount, Vector2 worldPos) {
     world.add(FloatingText(text: '$amount', position: worldPos));
   }
 
+  /// Chance to meet the between-floor merchant when descending.
+  static const shopChance = 0.05;
+
   Future<void> goToNextFloor() async {
     floor++;
     floorNotifier.value = floor;
-    final justUnlocked = await SaveService.instance.reportFloorReached(floor);
-    if (justUnlocked) {
+    final justUnlocked =
+        await SaveService.instance.reportFloorReached(floor, heroType);
+    if (justUnlocked && overlays.registeredOverlays.contains(Overlays.unlock)) {
       overlays.add(Overlays.unlock);
     }
+
+    final meetMerchant = _rng.nextDouble() < shopChance;
+    if (meetMerchant && overlays.registeredOverlays.contains(Overlays.shop)) {
+      pauseEngine();
+      overlays.add(Overlays.shop);
+    } else {
+      await _loadFloor();
+    }
+  }
+
+  /// Called by the shop overlay when the player is done shopping.
+  Future<void> finishShopAndEnterFloor() async {
+    if (overlays.isActive(Overlays.shop)) {
+      overlays.remove(Overlays.shop);
+    }
     await _loadFloor();
+    resumeEngine();
   }
 
   Future<void> onPlayerDied() async {
     await SaveService.instance.reportRunEnded(coins: coins, kills: kills);
+    coins = 0;
     overlays.add(Overlays.gameOver);
     pauseEngine();
   }
 
+  /// Banks any run coins still held (used when quitting from pause).
+  Future<void> bankAndQuit() async {
+    await SaveService.instance.reportRunEnded(coins: coins, kills: kills);
+    coins = 0;
+  }
+
   void togglePause() {
+    if (overlays.isActive(Overlays.shop)) return;
     if (overlays.isActive(Overlays.pause)) {
       overlays.remove(Overlays.pause);
       resumeEngine();

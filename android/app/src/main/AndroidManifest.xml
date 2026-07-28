@@ -1,8 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true" />
+
     <application
-        android:label="pixel_crawler"
+        android:label="Pixel Crawler"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:resizeableActivity="true"
+        android:supportsRtl="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -11,11 +20,9 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
+            android:windowSoftInputMode="adjustResize"
+            android:resizeableActivity="true">
+            <!-- Keep the Flutter engine alive across fold / unfold / rotate. -->
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"

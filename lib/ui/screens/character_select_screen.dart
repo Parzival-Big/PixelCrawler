@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../game/heroes.dart';
 import '../../services/save_service.dart';
+import '../adaptive.dart';
 import '../theme.dart';
 import '../widgets/pixel_sprite.dart';
 import '../widgets/pixel_widgets.dart';
@@ -13,8 +14,9 @@ class CharacterSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final save = SaveService.instance;
+    final mq = MediaQuery.of(context);
     return Scaffold(
-      body: SafeArea(
+      body: AdaptiveSafeArea(
         child: Column(
           children: [
             const SizedBox(height: 12),
@@ -23,16 +25,16 @@ class CharacterSelectScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 PixelButton(
                   label: '<',
-                  fontSize: 12,
+                  fontSize: adaptiveFont(context, 12),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'SCEGLI IL TUO EROE',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: pixelFont,
-                      fontSize: 14,
+                      fontSize: adaptiveFont(context, 14),
                       color: PixelColors.gold,
                     ),
                   ),
@@ -41,19 +43,56 @@ class CharacterSelectScreen extends StatelessWidget {
               ],
             ),
             Expanded(
-              child: Center(
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  itemCount: heroes.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 16),
-                  itemBuilder: (context, i) {
-                    final def = heroes.values.elementAt(i);
-                    final locked = def.unlockable && !save.slimeUnlocked;
-                    return _HeroCard(def: def, locked: locked);
-                  },
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final cards = [
+                    for (final def in heroes.values)
+                      _HeroCard(
+                        def: def,
+                        locked: def.unlockable && !save.slimeUnlocked,
+                      ),
+                  ];
+
+                  // Portrait / folded: vertical list. Wide tablet: wrap grid.
+                  // Phone landscape: horizontal carousel.
+                  if (mq.isPortrait) {
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      itemCount: cards.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (_, i) => Center(child: cards[i]),
+                    );
+                  }
+                  if (mq.isTablet && constraints.maxWidth >= 900) {
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      child: Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: cards,
+                      ),
+                    );
+                  }
+                  return Center(
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      itemCount: cards.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 16),
+                      itemBuilder: (_, i) => cards[i],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -71,6 +110,7 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final save = SaveService.instance;
     return PixelPanel(
       padding: const EdgeInsets.all(14),
       child: SizedBox(
@@ -99,17 +139,7 @@ class _HeroCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             if (locked)
-              Text(
-                'Raggiungi il piano '
-                '${SaveService.slimeUnlockFloor}\nper sbloccare',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: pixelFont,
-                  fontSize: 7,
-                  height: 1.8,
-                  color: PixelColors.textDim,
-                ),
-              )
+              _SlimeUnlockProgress(save: save)
             else ...[
               Text(
                 def.description,
@@ -127,6 +157,18 @@ class _HeroCard extends StatelessWidget {
               StatPips(label: 'ATK', value: def.atkPips, color: PixelColors.gold),
               const SizedBox(height: 4),
               StatPips(label: 'VEL', value: def.spdPips, color: PixelColors.green),
+              if (!def.unlockable) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'MAX P${save.bestFloorFor(def.type)}'
+                  '/${SaveService.slimeUnlockFloor}',
+                  style: const TextStyle(
+                    fontFamily: pixelFont,
+                    fontSize: 6,
+                    color: PixelColors.textDim,
+                  ),
+                ),
+              ],
             ],
             const SizedBox(height: 12),
             PixelButton(
@@ -146,6 +188,50 @@ class _HeroCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SlimeUnlockProgress extends StatelessWidget {
+  const _SlimeUnlockProgress({required this.save});
+
+  final SaveService save;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Text(
+          'Raggiungi il piano '
+          '${SaveService.slimeUnlockFloor}\n'
+          'con TUTTI questi eroi:',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: pixelFont,
+            fontSize: 6,
+            height: 1.8,
+            color: PixelColors.textDim,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final hero in SaveService.slimeUnlockHeroes)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Text(
+              '${heroes[hero]!.name.toUpperCase()}  '
+              '${save.bestFloorFor(hero)}'
+              '/${SaveService.slimeUnlockFloor}'
+              '${save.bestFloorFor(hero) >= SaveService.slimeUnlockFloor ? '  OK' : ''}',
+              style: TextStyle(
+                fontFamily: pixelFont,
+                fontSize: 6,
+                color: save.bestFloorFor(hero) >= SaveService.slimeUnlockFloor
+                    ? PixelColors.gold
+                    : PixelColors.textDim,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

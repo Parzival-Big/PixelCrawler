@@ -6,6 +6,7 @@ import 'package:flame/components.dart';
 import '../../config/game_assets.dart';
 import '../pixel_crawler_game.dart';
 import 'player.dart';
+import 'solid_obstacle.dart';
 
 /// Base for items collected by touching them.
 abstract class Pickup extends SpriteAnimationComponent
@@ -80,8 +81,9 @@ class PotionPickup extends Pickup {
   }
 }
 
-/// Opens on touch and pops out loot.
-class Chest extends SpriteComponent with HasGameReference<PixelCrawlerGame> {
+/// Opens on touch and pops out loot. Blocks movement until opened.
+class Chest extends SpriteComponent
+    with HasGameReference<PixelCrawlerGame>, SolidObstacle {
   Chest({required Vector2 position})
       : super(
           position: position,
@@ -91,6 +93,11 @@ class Chest extends SpriteComponent with HasGameReference<PixelCrawlerGame> {
 
   bool _open = false;
   final _rng = Random();
+
+  @override
+  double get solidWidth => 12;
+  @override
+  double get solidHeight => 10;
 
   @override
   Future<void> onLoad() async {
@@ -103,7 +110,7 @@ class Chest extends SpriteComponent with HasGameReference<PixelCrawlerGame> {
     super.update(dt);
     if (_open) return;
     final player = game.player;
-    if (player != null && player.position.distanceTo(position) < 14) {
+    if (player != null && player.position.distanceTo(position) < 16) {
       _open = true;
       sprite = GameAssets.chest.frame(1);
       final n = 2 + _rng.nextInt(3);
@@ -162,14 +169,19 @@ class Torch extends SpriteAnimationComponent {
 }
 
 /// Standing burning fire pot: a light source placed on the floor,
-/// y-sorted with the other entities.
-class FirePot extends SpriteAnimationComponent {
+/// y-sorted with the other entities. Blocks movement and projectiles.
+class FirePot extends SpriteAnimationComponent with SolidObstacle {
   FirePot({required Vector2 position})
       : super(
           position: position,
           size: Vector2.all(16),
           anchor: Anchor.bottomCenter,
         );
+
+  @override
+  double get solidWidth => 10;
+  @override
+  double get solidHeight => 9;
 
   @override
   Future<void> onLoad() async {
@@ -180,15 +192,33 @@ class FirePot extends SpriteAnimationComponent {
 }
 
 /// Static decorative prop (barrel, crate, bones...), y-sorted.
-class Decor extends SpriteComponent {
-  Decor({required Vector2 position, required this.spec})
-      : super(
+///
+/// Chunkier props ([solid] = true) block feet and projectiles; flat floor
+/// litter like skulls and bones does not.
+class Decor extends SpriteComponent with SolidObstacle {
+  Decor({
+    required Vector2 position,
+    required this.spec,
+    this.solid = true,
+  }) : super(
           position: position,
           size: Vector2.all(16),
           anchor: Anchor.bottomCenter,
         );
 
   final SpriteSpec spec;
+  final bool solid;
+
+  @override
+  double get solidWidth => solid ? 11 : 0;
+  @override
+  double get solidHeight => solid ? 9 : 0;
+
+  @override
+  ui.Rect get solidRect {
+    if (!solid) return ui.Rect.zero;
+    return super.solidRect;
+  }
 
   @override
   Future<void> onLoad() async {

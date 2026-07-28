@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flame/components.dart';
 
 import '../heroes.dart';
+import '../store_catalog.dart';
 import 'attacks.dart';
 import 'game_character.dart';
 import 'monster.dart';
@@ -23,6 +24,11 @@ class Player extends GameCharacter {
 
   static const aimRange = 130.0;
 
+  double get moveSpeed => def.speed + SessionBonus.extraSpeed;
+
+  double get attackCooldown =>
+      (def.attackCooldown - SessionBonus.extraCooldown).clamp(0.15, 2.0);
+
   @override
   Future<void> onLoad() async {
     animation = def.anim.animation();
@@ -37,7 +43,7 @@ class Player extends GameCharacter {
 
     final input = game.moveInput();
     if (input.length2 > 0.01) {
-      final delta = input.normalized() * def.speed * dt;
+      final delta = input.normalized() * moveSpeed * dt;
       moveAndCollide(delta);
       facing = input.normalized();
       faceDirection(input.x);
@@ -51,7 +57,7 @@ class Player extends GameCharacter {
 
   void tryAttack() {
     if (_attackTimer > 0 || isDead) return;
-    _attackTimer = def.attackCooldown;
+    _attackTimer = attackCooldown;
 
     // Auto-aim at the nearest monster in range, otherwise use facing.
     var dir = facing.clone();
@@ -69,7 +75,7 @@ class Player extends GameCharacter {
     }
     faceDirection(dir.x);
 
-    var dmg = def.damage;
+    var dmg = def.damage + SessionBonus.extraDamage;
     if (def.critChance > 0 && _rng.nextDouble() < def.critChance) {
       dmg *= 2;
     }
@@ -114,7 +120,25 @@ class Player extends GameCharacter {
   }
 }
 
-/// Run-scoped bonuses (blue potions raise max HP for the current run).
+/// Bonuses active for the current run only (shop + blue potions).
 class SessionBonus {
   static int extraHp = 0;
+  static int extraDamage = 0;
+  static double extraSpeed = 0;
+  static double extraCooldown = 0;
+  static final levels = <String, int>{};
+
+  static void reset() {
+    extraHp = 0;
+    extraDamage = 0;
+    extraSpeed = 0;
+    extraCooldown = 0;
+    levels.clear();
+  }
+
+  static int levelOf(StoreUpgrade upgrade) => levels[upgrade.id] ?? 0;
+
+  static void bumpLevel(StoreUpgrade upgrade) {
+    levels[upgrade.id] = levelOf(upgrade) + 1;
+  }
 }
