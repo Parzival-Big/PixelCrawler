@@ -134,14 +134,16 @@ def objects():
 
 
 def hazard_tiles():
-    """Pits and the two spike trap types (off + on frames)."""
+    """Pits and spike traps (off → charging → on)."""
     save(raw("floor_abyss.png"), "tiles", "pit.png")
     save(strip([
         raw("floor_small_spike_trap_off.png"),
+        raw("floor_small_spike_trap_charging.png"),
         raw("floor_small_spike_trap_on.png"),
     ]), "tiles", "trap_small.png")
     save(strip([
         raw("floor_big_spike_trap_off.png"),
+        raw("floor_big_spike_trap_charging.png"),
         raw("floor_big_spike_trap_on.png"),
     ]), "tiles", "trap_big.png")
 

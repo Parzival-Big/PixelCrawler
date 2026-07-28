@@ -110,6 +110,18 @@ class DungeonMap {
         t == TileType.trapBig;
   }
 
+  /// Walkable tiles plus pits — for flying monsters and ranged shots.
+  bool isFlyable(int x, int y) {
+    final t = tileAt(x, y);
+    return isWalkable(x, y) || t == TileType.pit;
+  }
+
+  /// Walls and void stop projectiles; pits and traps do not.
+  bool blocksProjectile(int x, int y) {
+    final t = tileAt(x, y);
+    return t == TileType.wall || t == TileType.empty;
+  }
+
   /// True for tiles that deal spike damage when stood on.
   bool isTrap(int x, int y) {
     final t = tileAt(x, y);

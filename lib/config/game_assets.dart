@@ -55,10 +55,10 @@ class GameAssets {
     SpriteSpec('objects/bone.png'),
   ];
 
-  // Pits + spike traps (two types).
+  // Pits + spike traps (off / charging / on).
   static const pit = SpriteSpec('tiles/pit.png');
-  static const trapSmall = AnimSpec('tiles/trap_small.png', 16, 16, 2, 0.35);
-  static const trapBig = AnimSpec('tiles/trap_big.png', 16, 16, 2, 0.4);
+  static const trapSmall = SpriteSheetSpec('tiles/trap_small.png', 16, 16, 3);
+  static const trapBig = SpriteSheetSpec('tiles/trap_big.png', 16, 16, 3);
 
   // Doors: one sprite per wall side (n/s/e/w match pack top/bottom/right/left).
   static const doorOpenN = SpriteSpec('tiles/door_open_n.png');

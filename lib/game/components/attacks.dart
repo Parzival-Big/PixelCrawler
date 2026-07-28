@@ -130,7 +130,8 @@ class Projectile extends SpriteAnimationComponent
     priority = (position.y * 10).round() + 5;
 
     if (position.distanceTo(_start) > maxRange ||
-        !game.map.isWalkable(position.x ~/ tileSize, position.y ~/ tileSize) ||
+        game.map.blocksProjectile(
+            position.x ~/ tileSize, position.y ~/ tileSize) ||
         game.solidBlocksPoint(position)) {
       _explode(hit: null);
       return;
@@ -234,7 +235,8 @@ class EnemyProjectile extends SpriteAnimationComponent
     priority = (position.y * 10).round() + 5;
 
     if (position.distanceTo(_start) > maxRange ||
-        !game.map.isWalkable(position.x ~/ tileSize, position.y ~/ tileSize) ||
+        game.map.blocksProjectile(
+            position.x ~/ tileSize, position.y ~/ tileSize) ||
         game.solidBlocksPoint(position)) {
       removeFromParent();
       return;
