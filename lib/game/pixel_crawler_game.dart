@@ -18,6 +18,7 @@ import 'components/monster.dart';
 import 'components/pickups.dart';
 import 'components/player.dart';
 import 'components/shop_pedestal.dart';
+import 'components/room_occluder.dart';
 import 'components/solid_obstacle.dart';
 import 'components/traps.dart';
 import 'dungeon/dungeon_generator.dart';
@@ -106,10 +107,10 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     layoutHudControls(size);
   }
 
-  /// Public so tests can exercise resize without a full Flutter bind.
+  /// Fit the whole current room on screen (letterbox if aspect differs).
+  /// Adjacent rooms are hidden by [RoomOccluder], not by zooming in.
   void fitCameraToSize(Vector2 size) {
     if (size.y <= 0 || size.x <= 0) return;
-    // Fit the whole current room on screen (letterbox if aspect differs).
     final zoom = min(size.x / roomWorldWidth, size.y / roomWorldHeight);
     camera.viewfinder.zoom = zoom;
     focusCameraOnCurrentRoom();
@@ -261,6 +262,7 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     world.add(DungeonRenderer(map));
+    world.add(RoomOccluder());
 
     // Spike trap overlays.
     for (var y = 0; y < map.height; y++) {

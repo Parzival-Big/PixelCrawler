@@ -31,6 +31,7 @@ class MonsterDef {
     required this.aggroRange,
     required this.coinDrop,
     this.erratic = false,
+    this.flies = false,
     this.ranged = false,
     this.preferredRange = 70,
     this.projectileCooldown = 1.4,
@@ -47,6 +48,9 @@ class MonsterDef {
 
   /// Erratic movers (bats, ghosts) wobble sideways while chasing.
   final bool erratic;
+
+  /// Can cross pit / burrow tiles.
+  final bool flies;
 
   /// Keeps distance and shoots projectiles at the player.
   final bool ranged;
@@ -75,6 +79,7 @@ const monsters = <MonsterType, MonsterDef>{
     aggroRange: 120,
     coinDrop: 1,
     erratic: true,
+    flies: true,
   ),
   MonsterType.rat: MonsterDef(
     type: MonsterType.rat,
@@ -142,6 +147,7 @@ const monsters = <MonsterType, MonsterDef>{
     aggroRange: 150,
     coinDrop: 3,
     erratic: true,
+    flies: true,
   ),
   MonsterType.flyingEye: MonsterDef(
     type: MonsterType.flyingEye,
@@ -153,6 +159,7 @@ const monsters = <MonsterType, MonsterDef>{
     aggroRange: 140,
     coinDrop: 2,
     erratic: true,
+    flies: true,
     ranged: true,
     preferredRange: 75,
     projectileCooldown: 1.2,

@@ -45,7 +45,10 @@ abstract class GameCharacter extends SpriteAnimationComponent
     ]) {
       final tx = p.$1 ~/ tileSize;
       final ty = p.$2 ~/ tileSize;
-      if (!game.map.isWalkable(tx, ty)) {
+      final ok = canFly
+          ? game.map.isFlyable(tx, ty)
+          : game.map.isWalkable(tx, ty);
+      if (!ok) {
         return false;
       }
       if (blockedByDoors && game.map.isDoorTile(tx, ty)) {
@@ -57,6 +60,9 @@ abstract class GameCharacter extends SpriteAnimationComponent
 
   /// When true, door tiles are impassable (monsters never cross doors).
   bool get blockedByDoors => false;
+
+  /// Flying units can cross pit tiles.
+  bool get canFly => false;
 
   /// Axis-separated movement against the tile grid; returns the applied delta.
   Vector2 moveAndCollide(Vector2 delta) {

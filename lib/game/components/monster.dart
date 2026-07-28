@@ -29,6 +29,9 @@ class Monster extends GameCharacter {
   @override
   bool get blockedByDoors => true;
 
+  @override
+  bool get canFly => def.flies;
+
   double _contactTimer = 0;
   double _wanderTimer = 0;
   double _erraticPhase = 0;

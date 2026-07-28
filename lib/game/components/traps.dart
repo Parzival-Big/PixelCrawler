@@ -6,8 +6,10 @@ import '../../config/game_assets.dart';
 import '../pixel_crawler_game.dart';
 import 'dungeon_renderer.dart';
 
-/// Spike trap tile that damages the player while standing on it.
-class SpikeTrap extends SpriteAnimationComponent
+enum SpikePhase { off, charging, on }
+
+/// Spike trap with Off → Charging → On cycle. Damages only while On.
+class SpikeTrap extends SpriteComponent
     with HasGameReference<PixelCrawlerGame> {
   SpikeTrap({required this.tile, required this.big})
       : super(
@@ -19,25 +21,60 @@ class SpikeTrap extends SpriteAnimationComponent
 
   final Point<int> tile;
   final bool big;
-  double _cooldown = 0;
+
+  late final SpriteSheetSpec _sheet;
+  SpikePhase _phase = SpikePhase.off;
+  double _phaseTimer = 0;
+  double _damageCooldown = 0;
 
   int get damage => big ? 2 : 1;
 
+  double get _offDuration => big ? 1.15 : 0.95;
+  double get _chargeDuration => big ? 0.55 : 0.45;
+  double get _onDuration => big ? 0.7 : 0.55;
+
+  double get _cycleLength => _offDuration + _chargeDuration + _onDuration;
+
   @override
   Future<void> onLoad() async {
-    animation = (big ? GameAssets.trapBig : GameAssets.trapSmall).animation();
+    _sheet = big ? GameAssets.trapBig : GameAssets.trapSmall;
+    // Desync traps so a room doesn't pulse in perfect unison.
+    final seed = (tile.x * 17 + tile.y * 31) % 1000;
+    _phaseTimer = (seed / 1000.0) * _cycleLength;
+    _applyPhaseFromTimer();
+  }
+
+  void _applyPhaseFromTimer() {
+    var t = _phaseTimer % _cycleLength;
+    if (t < _offDuration) {
+      _phase = SpikePhase.off;
+    } else if (t < _offDuration + _chargeDuration) {
+      _phase = SpikePhase.charging;
+    } else {
+      _phase = SpikePhase.on;
+    }
+    sprite = _sheet.frame(_phase.index);
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    _cooldown -= dt;
+    _phaseTimer += dt;
+    _damageCooldown -= dt;
+    final prev = _phase;
+    _applyPhaseFromTimer();
+    if (_phase == SpikePhase.on && prev != SpikePhase.on) {
+      // Fresh On pulse: allow an immediate hit.
+      _damageCooldown = 0;
+    }
+    if (_phase != SpikePhase.on) return;
+
     final player = game.player;
-    if (player == null || player.isDead || _cooldown > 0) return;
+    if (player == null || player.isDead || _damageCooldown > 0) return;
     final tx = player.position.x ~/ tileSize;
     final ty = player.position.y ~/ tileSize;
     if (tx == tile.x && ty == tile.y) {
-      _cooldown = 0.7;
+      _damageCooldown = 0.55;
       player.receiveContactDamage(damage);
     }
   }
