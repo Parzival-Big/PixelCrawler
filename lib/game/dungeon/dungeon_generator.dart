@@ -110,6 +110,7 @@ class DungeonGenerator {
       ));
       layouts.apply(map, interior, kindOf(e.key));
       _clearDoorApproaches(map, interior);
+      _ensureInternalConnectivity(map, interior);
     }
 
     // Connect neighbors with door openings.
@@ -217,6 +218,25 @@ class DungeonGenerator {
         x += (cx - e.x).sign;
         y += (cy - e.y).sign;
       }
+    }
+  }
+
+  /// BoI-style cohesion: clear L-paths between door midpoints so every
+  /// entrance of a room stays mutually reachable.
+  void _ensureInternalConnectivity(DungeonMap map, Rectangle<int> room) {
+    final cx = room.left + room.width ~/ 2;
+    final cy = room.top + room.height ~/ 2;
+    if (map.tileAt(cx, cy) == TileType.pit || map.isTrap(cx, cy)) {
+      map.setTile(cx, cy, TileType.floor);
+    }
+    final doors = [
+      Point(cx, room.top),
+      Point(cx, room.top + room.height - 1),
+      Point(room.left, cy),
+      Point(room.left + room.width - 1, cy),
+    ];
+    for (final d in doors) {
+      _carvePath(map, d, Point(cx, cy));
     }
   }
 

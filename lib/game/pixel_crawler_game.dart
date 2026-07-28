@@ -2,7 +2,6 @@ import 'dart:math' show Point, Random, min;
 
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
-import 'package:flame/experimental.dart' show Rectangle;
 import 'package:flame/input.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
@@ -42,9 +41,14 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     SessionBonus.reset();
   }
 
-  /// Vertical world units kept on screen — tablets/unfolded foldables show
-  /// more of the dungeon horizontally while keeping the same vertical FOV.
-  static const designHeight = 216.0;
+  /// World size of one room including the wall ring (BoI single-room view).
+  static const roomWorldWidth =
+      (DungeonGenerator.interiorW + 2) * tileSize; // 15 * 16
+  static const roomWorldHeight =
+      (DungeonGenerator.interiorH + 2) * tileSize; // 11 * 16
+
+  /// Used for HUD control scaling; matches the room height.
+  static const designHeight = roomWorldHeight;
 
   final HeroType heroType;
   final _rng = Random();
@@ -74,6 +78,11 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   late final floorNotifier = ValueNotifier<int>(1);
   late final keysNotifier = ValueNotifier<int>(0);
   late final bossKeysNotifier = ValueNotifier<int>(0);
+  late final roomMapNotifier = ValueNotifier<int>(0);
+
+  RoomInfo? currentRoom;
+  final discoveredRooms = <String>{};
+
 
   late JoystickComponent _joystick;
   late HudButtonComponent _attackButton;
@@ -100,11 +109,24 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
   /// Public so tests can exercise resize without a full Flutter bind.
   void fitCameraToSize(Vector2 size) {
     if (size.y <= 0 || size.x <= 0) return;
-    camera.viewfinder.zoom = size.y / designHeight;
-    // Zoom changes the visible world rect — refresh follow bounds and keep
-    // the player centred (otherwise they can walk off-screen).
-    refreshCameraBounds();
-    snapCameraToPlayer();
+    // Fit the whole current room on screen (letterbox if aspect differs).
+    final zoom = min(size.x / roomWorldWidth, size.y / roomWorldHeight);
+    camera.viewfinder.zoom = zoom;
+    focusCameraOnCurrentRoom();
+  }
+
+  /// Locks the camera on the active room centre (not the player).
+  void focusCameraOnCurrentRoom() {
+    final room = currentRoom;
+    if (room == null) {
+      snapCameraToPlayer();
+      return;
+    }
+    final outer = room.outerBounds;
+    camera.viewfinder.position = Vector2(
+      (outer.left + outer.width / 2) * tileSize,
+      (outer.top + outer.height / 2) * tileSize,
+    );
   }
 
   /// Keeps the viewfinder locked on the player immediately.
@@ -114,25 +136,36 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     camera.viewfinder.position = p.position.clone();
   }
 
-  /// Camera centre must stay inset by half the visible world rect so the
-  /// player cannot leave the screen. Computed in world units (not pixels):
-  /// `considerViewport: true` is unsafe with a zoomed MaxViewport because it
-  /// subtracts `viewport.virtualSize` (canvas pixels) from the map size.
+  /// Room-locked camera: no scroll bounds across the whole map.
   void refreshCameraBounds() {
-    if (!_mapReady) return;
-    final mapW = map.width * tileSize;
-    final mapH = map.height * tileSize;
-    final visible = camera.visibleWorldRect;
-    final halfW = visible.width / 2;
-    final halfH = visible.height / 2;
-    final minX = halfW;
-    final maxX = mapW > visible.width ? mapW - halfW : halfW;
-    final minY = halfH;
-    final maxY = mapH > visible.height ? mapH - halfH : halfH;
-    camera.setBounds(
-      Rectangle.fromLTRB(minX, minY, maxX, maxY),
-      considerViewport: false,
+    camera.setBounds(null);
+  }
+
+  void discoverRoom(RoomInfo room) {
+    currentRoom = room;
+    if (discoveredRooms.add(room.gridKey)) {
+      roomMapNotifier.value++;
+    }
+    focusCameraOnCurrentRoom();
+  }
+
+  void _syncRoomFromPlayer() {
+    final p = player;
+    if (p == null || !_mapReady) return;
+    final info = map.roomInfoContaining(
+      p.position.x ~/ tileSize,
+      p.position.y ~/ tileSize,
     );
+    if (info == null) return;
+    if (currentRoom?.gridKey != info.gridKey) {
+      discoverRoom(info);
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _syncRoomFromPlayer();
   }
 
   /// Repositions virtual controls for the current canvas / hinge insets.
@@ -306,9 +339,17 @@ class PixelCrawlerGame extends FlameGame with KeyboardEvents {
     world.add(player!);
 
     _mapReady = true;
-    camera.follow(player!, snap: true);
+    discoveredRooms.clear();
+    currentRoom = null;
+    final startRoom = map.roomInfoContaining(
+      map.playerSpawn.x,
+      map.playerSpawn.y,
+    );
+    if (startRoom != null) {
+      discoverRoom(startRoom);
+    }
     refreshCameraBounds();
-    snapCameraToPlayer();
+    focusCameraOnCurrentRoom();
   }
 
   Vector2 _tileCenter(int x, int y) =>

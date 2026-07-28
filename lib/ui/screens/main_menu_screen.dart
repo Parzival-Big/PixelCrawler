@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../config/game_assets.dart';
-import '../../services/save_service.dart';
 import '../adaptive.dart';
 import '../theme.dart';
 import '../widgets/pixel_sprite.dart';
 import '../widgets/pixel_widgets.dart';
 import 'character_select_screen.dart';
+import 'stats_screen.dart';
 
 class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key});
@@ -23,7 +23,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final save = SaveService.instance;
     final titleSize = adaptiveFont(context, 34);
     final mq = MediaQuery.of(context);
 
@@ -111,21 +110,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       fontSize: adaptiveFont(context, 14),
                       onPressed: () => _open(const CharacterSelectScreen()),
                     ),
-                    const SizedBox(height: 24),
-                    PixelPanel(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        'RECORD: PIANO ${save.bestFloor}'
-                        '   MONETE: ${save.totalCoins}',
-                        style: TextStyle(
-                          fontFamily: pixelFont,
-                          fontSize: adaptiveFont(context, 8),
-                          color: PixelColors.gold,
-                        ),
-                      ),
+                    const SizedBox(height: 14),
+                    PixelButton(
+                      label: 'STATISTICHE',
+                      color: PixelColors.surfaceLight,
+                      textColor: PixelColors.text,
+                      fontSize: adaptiveFont(context, 11),
+                      onPressed: () => _open(const StatsScreen()),
                     ),
                   ],
                 ),

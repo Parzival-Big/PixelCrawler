@@ -51,6 +51,16 @@ class RoomInfo {
   final RoomKind kind;
   final int gridX;
   final int gridY;
+
+  /// Outer rectangle including the surrounding wall ring.
+  Rectangle<int> get outerBounds => Rectangle(
+        bounds.left - 1,
+        bounds.top - 1,
+        bounds.width + 2,
+        bounds.height + 2,
+      );
+
+  String get gridKey => '$gridX,$gridY';
 }
 
 /// Grid model of one dungeon floor. Coordinates are in tile units.
@@ -106,7 +116,8 @@ class DungeonMap {
     return t == TileType.trapSmall || t == TileType.trapBig;
   }
 
-  /// Room containing tile ([tx], [ty]), or null if outside every room.
+  bool isDoorTile(int tx, int ty) =>
+      doorSpawns.any((d) => d.pos.x == tx && d.pos.y == ty);
   Rectangle<int>? roomContaining(int tx, int ty) {
     for (final r in rooms) {
       if (tx >= r.left &&
