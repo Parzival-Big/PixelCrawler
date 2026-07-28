@@ -1,4 +1,4 @@
-import 'dart:ui' show DisplayFeature, DisplayFeatureType, DisplayFeatureState, Rect;
+import 'dart:ui' show DisplayFeature, DisplayFeatureType, DisplayFeatureState, Offset, Rect;
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
@@ -87,6 +87,54 @@ void main() {
       for (var i = 0; i < 30; i++) {
         game.update(1 / 60);
       }
+    },
+  );
+
+  testWithGame<PixelCrawlerGame>(
+    'camera stays locked on the player after movement and resize',
+    () => PixelCrawlerGame(heroType: HeroType.knight),
+    (game) async {
+      game.update(0);
+      game.onGameResize(Vector2(800, 400));
+
+      final player = game.player!;
+      // Move around the room — the player must remain on screen.
+      for (var i = 0; i < 120; i++) {
+        player.moveAndCollide(Vector2(3, 1.5));
+        game.update(1 / 60);
+      }
+      var visible = game.camera.visibleWorldRect;
+      expect(
+        visible.contains(Offset(player.position.x, player.position.y)),
+        isTrue,
+        reason: 'player left the screen while moving',
+      );
+
+      // After a fold/unfold-style resize the player stays on screen.
+      game.onGameResize(Vector2(400, 800));
+      game.update(0);
+      visible = game.camera.visibleWorldRect;
+      expect(
+        visible.contains(Offset(player.position.x, player.position.y)),
+        isTrue,
+        reason: 'player left the screen after resize',
+      );
+
+      // Away from map edges the camera centre matches the player.
+      player.position = Vector2(
+        game.map.width * 8,
+        game.map.height * 8,
+      );
+      game.snapCameraToPlayer();
+      game.update(0);
+      expect(
+        game.camera.viewfinder.position.x,
+        closeTo(player.position.x, 1.0),
+      );
+      expect(
+        game.camera.viewfinder.position.y,
+        closeTo(player.position.y, 1.0),
+      );
     },
   );
 }
