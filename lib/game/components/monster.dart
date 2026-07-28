@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 
 import '../monsters.dart';
 import 'attacks.dart';
+import 'dungeon_renderer.dart';
 import 'game_character.dart';
 import 'pickups.dart';
 import 'shop_pedestal.dart';
@@ -14,17 +15,21 @@ class Monster extends GameCharacter {
     required this.def,
     required super.position,
     required int floor,
-  })  : _floor = floor,
+  })  : isBoss = def.type == MonsterType.boss,
+        _floor = floor,
         super(
-          frameSize: def.anim.size,
+          frameSize: def.anim.size *
+              (def.type == MonsterType.boss ? bossScale : 1.0),
           maxHp: def.baseHp + def.hpPerFloor * (floor - 1),
         );
+
+  static const bossScale = 1.5;
 
   final MonsterDef def;
   final int _floor;
   final _rng = Random();
 
-  bool isBoss = false;
+  bool isBoss;
 
   @override
   bool get blockedByDoors => true;
@@ -32,21 +37,53 @@ class Monster extends GameCharacter {
   @override
   bool get canFly => def.flies;
 
+  @override
+  double get feetWidth => isBoss ? 9 * bossScale : 9;
+
+  @override
+  double get feetHeight => isBoss ? 5 * bossScale : 5;
+
+  double get _contactRange => isBoss ? 11 * bossScale : 11;
+
   double _contactTimer = 0;
   double _wanderTimer = 0;
   double _erraticPhase = 0;
   double _shotTimer = 0;
   Vector2 _wanderDir = Vector2.zero();
 
+  /// True while the player is in the same room (Isaac-style activation).
+  bool get isActivated {
+    final room = game.currentRoom;
+    if (room == null) return false;
+    final info = game.map.roomInfoContaining(
+      position.x ~/ tileSize,
+      position.y ~/ tileSize,
+    );
+    return info?.gridKey == room.gridKey;
+  }
+
   @override
   Future<void> onLoad() async {
     animation = def.anim.animation();
     _erraticPhase = _rng.nextDouble() * pi * 2;
     _shotTimer = _rng.nextDouble() * def.projectileCooldown;
+    // Hidden until the first update confirms this is the active room.
+    opacity = 0;
+    animationTicker?.paused = true;
   }
 
   @override
   void update(double dt) {
+    // Frozen + invisible until the player enters this room (no spoil through
+    // doorways / letterbox edges).
+    if (!isActivated) {
+      opacity = 0;
+      animationTicker?.paused = true;
+      return;
+    }
+    opacity = 1;
+    animationTicker?.paused = false;
+
     super.update(dt);
     final player = game.player;
     if (player == null || isDead || player.isDead) return;
@@ -97,7 +134,7 @@ class Monster extends GameCharacter {
       faceDirection(move.x);
     }
 
-    if (dist < 11 && _contactTimer <= 0) {
+    if (dist < _contactRange && _contactTimer <= 0) {
       _contactTimer = 0.8;
       player.receiveContactDamage(def.damage);
     }
@@ -129,6 +166,12 @@ class Monster extends GameCharacter {
   }
 
   @override
+  bool receiveDamage(int amount) {
+    if (!isActivated) return false;
+    return super.receiveDamage(amount);
+  }
+
+  @override
   void onDeath() {
     game.onMonsterKilled();
     for (var i = 0; i < def.coinDrop; i++) {
@@ -150,9 +193,10 @@ class Monster extends GameCharacter {
 
   @override
   void render(ui.Canvas canvas) {
+    if (opacity <= 0) return;
     super.render(canvas);
     if (hp < maxHp) {
-      const barW = 12.0;
+      final barW = isBoss ? 18.0 : 12.0;
       final x = (size.x - barW) / 2;
       canvas.drawRect(
         ui.Rect.fromLTWH(x, -3, barW, 2),

@@ -1,11 +1,25 @@
 import 'package:flame/components.dart';
+import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pixel_crawler/game/components/monster.dart';
 import 'package:pixel_crawler/game/components/pickups.dart';
 import 'package:pixel_crawler/game/components/traps.dart';
 import 'package:pixel_crawler/game/dungeon/dungeon_map.dart';
+import 'package:pixel_crawler/game/heroes.dart';
 import 'package:pixel_crawler/game/monsters.dart';
+import 'package:pixel_crawler/game/pixel_crawler_game.dart';
+import 'package:pixel_crawler/services/save_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    SaveService.resetForTest();
+    await SaveService.load();
+  });
+
   group('pits', () {
     late DungeonMap map;
 
@@ -54,4 +68,41 @@ void main() {
       SpikePhase.on,
     ]);
   });
+
+  test('boss render size is 1.5x the base sprite', () {
+    expect(Monster.bossScale, closeTo(1.5, 0.001));
+    final base = monsters[MonsterType.boss]!.anim.size;
+    expect(base.x * Monster.bossScale, closeTo(base.x * 1.5, 0.001));
+  });
+
+  testWithGame<PixelCrawlerGame>(
+    'only monsters in the current room are activated',
+    () => PixelCrawlerGame(heroType: HeroType.knight),
+    (game) async {
+      game.update(0);
+      final room = game.currentRoom!;
+      final monsters = game.world.children.query<Monster>().toList();
+      expect(monsters, isNotEmpty);
+
+      for (final m in monsters) {
+        final info = game.map.roomInfoContaining(
+          m.position.x ~/ 16,
+          m.position.y ~/ 16,
+        );
+        final sameRoom = info?.gridKey == room.gridKey;
+        expect(m.isActivated, sameRoom);
+        if (sameRoom) {
+          expect(m.opacity, greaterThan(0));
+        } else {
+          expect(m.opacity, 0);
+        }
+      }
+
+      for (final b in monsters.where((m) => m.isBoss)) {
+        final base = b.def.anim.size;
+        expect(b.size.x, closeTo(base.x * Monster.bossScale, 0.01));
+        expect(b.size.y, closeTo(base.y * Monster.bossScale, 0.01));
+      }
+    },
+  );
 }
